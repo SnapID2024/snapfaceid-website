@@ -1,10 +1,19 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { database } from '@/lib/firebase'
-import { ref, onValue, off } from 'firebase/database'
+import { getDatabase, ref, onValue, off } from 'firebase/database'
 import { GoogleMap, LoadScript, Marker, InfoWindow } from '@react-google-maps/api'
 import Link from 'next/link'
+import { getApp } from 'firebase/app'
+
+// Initialize Firebase on client side
+let database: any = null
+try {
+  const app = getApp()
+  database = getDatabase(app)
+} catch (error) {
+  console.warn('Firebase not initialized:', error)
+}
 
 interface GuardianAlert {
   id: string
@@ -39,32 +48,50 @@ export default function AdminDashboard() {
   const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
-    // Listen to Firebase Realtime Database for Guardian alerts
-    const alertsRef = ref(database, 'guardian_alerts')
-
-    const unsubscribe = onValue(alertsRef, (snapshot) => {
-      const data = snapshot.val()
-      if (data) {
-        const alertsList: GuardianAlert[] = Object.keys(data).map(key => ({
-          id: key,
-          ...data[key]
-        }))
-        setAlerts(alertsList)
-
-        // Center map on first active alert
-        const activeAlert = alertsList.find(a => a.status === 'active' || a.status === 'no_response')
-        if (activeAlert) {
-          setMapCenter({
-            lat: activeAlert.currentLocation.latitude,
-            lng: activeAlert.currentLocation.longitude
-          })
-        }
-      }
+    // Only setup Firebase listener if database is available
+    if (!database) {
       setIsLoading(false)
-    })
+      return
+    }
 
-    return () => {
-      off(alertsRef)
+    try {
+      // Listen to Firebase Realtime Database for Guardian alerts
+      const alertsRef = ref(database, 'guardian_alerts')
+
+      const unsubscribe = onValue(
+        alertsRef,
+        (snapshot) => {
+          const data = snapshot.val()
+          if (data) {
+            const alertsList: GuardianAlert[] = Object.keys(data).map(key => ({
+              id: key,
+              ...data[key]
+            }))
+            setAlerts(alertsList)
+
+            // Center map on first active alert
+            const activeAlert = alertsList.find(a => a.status === 'active' || a.status === 'no_response')
+            if (activeAlert) {
+              setMapCenter({
+                lat: activeAlert.currentLocation.latitude,
+                lng: activeAlert.currentLocation.longitude
+              })
+            }
+          }
+          setIsLoading(false)
+        },
+        (error) => {
+          console.error('Firebase error:', error)
+          setIsLoading(false)
+        }
+      )
+
+      return () => {
+        off(alertsRef)
+      }
+    } catch (error) {
+      console.error('Error setting up Firebase listener:', error)
+      setIsLoading(false)
     }
   }, [])
 
