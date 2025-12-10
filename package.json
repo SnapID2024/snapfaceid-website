@@ -1,0 +1,29 @@
+{
+  "name": "snapfaceid-website",
+  "version": "1.0.0",
+  "description": "Official website for SnapfaceID - Personal Safety Dating App",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint"
+  },
+  "keywords": ["snapfaceid", "dating", "safety", "guardian", "next.js"],
+  "author": "SnapfaceID Team",
+  "license": "Proprietary",
+  "dependencies": {
+    "@react-google-maps/api": "^2.20.7",
+    "firebase": "^12.6.0",
+    "next": "^16.0.8",
+    "react": "^19.2.1",
+    "react-dom": "^19.2.1"
+  },
+  "devDependencies": {
+    "@types/node": "^24.10.2",
+    "@types/react": "^19.2.7",
+    "autoprefixer": "^10.4.22",
+    "postcss": "^8.5.6",
+    "tailwindcss": "^4.1.17",
+    "typescript": "^5.9.3"
+  }
+}
