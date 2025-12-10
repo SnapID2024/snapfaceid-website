@@ -8,7 +8,13 @@
     "start": "next start",
     "lint": "next lint"
   },
-  "keywords": ["snapfaceid", "dating", "safety", "guardian", "next.js"],
+  "keywords": [
+    "snapfaceid",
+    "dating",
+    "safety",
+    "guardian",
+    "next.js"
+  ],
   "author": "SnapfaceID Team",
   "license": "Proprietary",
   "dependencies": {
@@ -19,6 +25,7 @@
     "react-dom": "^19.2.1"
   },
   "devDependencies": {
+    "@tailwindcss/postcss": "^4.1.17",
     "@types/node": "^24.10.2",
     "@types/react": "^19.2.7",
     "autoprefixer": "^10.4.22",
