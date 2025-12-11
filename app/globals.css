@@ -5,18 +5,12 @@
 @tailwind utilities;
 
 :root {
-  --primary: #6A1B9A;
-  --primary-dark: #3D1A54;
-  --secondary: #FF5722;
-  --secondary-dark: #E64A19;
+  --background: #ffffff;
+  --foreground: #171717;
 }
 
 body {
+  color: var(--foreground);
+  background: var(--background);
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-}
-
-@layer utilities {
-  .animate-pulse-slow {
-    animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
-  }
 }
