@@ -5,15 +5,32 @@ export default function Home() {
   return (
     <main className="min-h-screen bg-gradient-to-b from-white to-purple-50">
       {/* Header */}
-      <header className="bg-white shadow-sm">
-        <nav className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+      <header className="bg-white shadow-sm sticky top-0 z-50">
+        <nav className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3">
           <div className="flex justify-between items-center">
-            <div className="flex items-center space-x-2">
-              <div className="w-10 h-10 bg-primary rounded-full flex items-center justify-center text-white font-bold text-xl">
-                S
-              </div>
-              <span className="text-2xl font-bold text-primary">SnapfaceID</span>
-            </div>
+            <Link href="/" className="flex items-center space-x-3 hover:opacity-80 transition">
+              <svg width="40" height="40" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg" className="drop-shadow-sm">
+                <defs>
+                  <linearGradient id="purpleGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" style={{stopColor: '#8B4DAE', stopOpacity: 1}} />
+                    <stop offset="100%" style={{stopColor: '#6A1B9A', stopOpacity: 1}} />
+                  </linearGradient>
+                  <linearGradient id="orangeGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" style={{stopColor: '#FF7043', stopOpacity: 1}} />
+                    <stop offset="100%" style={{stopColor: '#E64A19', stopOpacity: 1}} />
+                  </linearGradient>
+                </defs>
+                <path d="M 60 40 Q 40 60 40 100 Q 40 140 60 160 L 100 160 L 100 40 Z" fill="url(#purpleGrad)"/>
+                <path d="M 100 40 L 100 160 Q 120 140 140 100 Q 140 60 120 40 Z" fill="url(#orangeGrad)"/>
+                <circle cx="65" cy="75" r="6" fill="#1A0033" opacity="0.7"/>
+                <circle cx="125" cy="75" r="6" fill="#1A0033" opacity="0.7"/>
+                <path d="M 70 110 Q 75 115 85 115" stroke="#1A0033" strokeWidth="2.5" fill="none" strokeLinecap="round" opacity="0.6"/>
+                <path d="M 115 110 Q 120 115 130 115" stroke="#1A0033" strokeWidth="2.5" fill="none" strokeLinecap="round" opacity="0.8"/>
+              </svg>
+              <span className="text-2xl font-bold bg-gradient-to-r from-primary via-purple-600 to-secondary bg-clip-text text-transparent">
+                SnapfaceID
+              </span>
+            </Link>
             <div className="hidden md:flex space-x-6">
               <Link href="#features" className="text-gray-700 hover:text-primary transition">
                 Features
