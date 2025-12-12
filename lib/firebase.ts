@@ -1,8 +1,10 @@
 'use client'
 
 import { initializeApp, getApps, getApp, FirebaseApp } from 'firebase/app'
+import { getFirestore, Firestore } from 'firebase/firestore'
 import { getDatabase, Database } from 'firebase/database'
 import { getAuth, Auth } from 'firebase/auth'
+import { getStorage, FirebaseStorage } from 'firebase/storage'
 
 // Firebase configuration - Only initialized on client side
 const firebaseConfig = {
@@ -16,15 +18,16 @@ const firebaseConfig = {
 }
 
 let app: FirebaseApp | null = null
-let database: Database | null = null
+let db: Firestore | null = null           // Firestore for Users, Persons
+let realtimeDb: Database | null = null    // Realtime DB for Guardian Alerts
 let auth: Auth | null = null
+let storage: FirebaseStorage | null = null
 
 // Initialize Firebase only if config is complete
 const isConfigValid = () => {
   return (
     firebaseConfig.apiKey &&
-    firebaseConfig.projectId &&
-    firebaseConfig.databaseURL
+    firebaseConfig.projectId
   )
 }
 
@@ -42,8 +45,16 @@ const initializeFirebase = () => {
       app = getApp()
     }
 
-    database = getDatabase(app)
+    // Firestore for structured data (Users, Persons)
+    db = getFirestore(app)
+
+    // Realtime Database for live data (Guardian Alerts, Location tracking)
+    if (firebaseConfig.databaseURL) {
+      realtimeDb = getDatabase(app)
+    }
+
     auth = getAuth(app)
+    storage = getStorage(app)
     return true
   } catch (error) {
     console.error('Failed to initialize Firebase:', error)
@@ -54,5 +65,5 @@ const initializeFirebase = () => {
 // Initialize on module load
 initializeFirebase()
 
-export { app, database, auth }
+export { app, db, realtimeDb, auth, storage }
 export default app

@@ -108,8 +108,8 @@ export default function Contact() {
                   </div>
                   <div>
                     <h3 className="font-semibold text-gray-900">Email</h3>
-                    <a href="mailto:support@snapfaceid.com" className="text-[#6A1B9A] hover:underline">
-                      support@snapfaceid.com
+                    <a href="mailto:bellacruzcompany@gmail.com" className="text-[#6A1B9A] hover:underline">
+                      bellacruzcompany@gmail.com
                     </a>
                   </div>
                 </div>
@@ -124,8 +124,8 @@ export default function Contact() {
                   </div>
                   <div>
                     <h3 className="font-semibold text-gray-900">Phone</h3>
-                    <a href="tel:+1-800-SNAPFACE" className="text-[#6A1B9A] hover:underline">
-                      1-800-SNAPFACE
+                    <a href="tel:+17864490937" className="text-[#6A1B9A] hover:underline">
+                      (786) 449-0937
                     </a>
                   </div>
                 </div>
