@@ -125,9 +125,14 @@ const Footer: React.FC<FooterProps> = ({ simplified = false }) => {
 
         {/* Bottom Bar */}
         <div className="border-t border-gray-700 mt-10 pt-8 flex flex-col md:flex-row items-center justify-between">
-          <p className="text-gray-400 text-sm">
-            © 2025 SnapfaceID. All rights reserved.
-          </p>
+          <div className="flex items-center gap-4">
+            <p className="text-gray-400 text-sm">
+              © 2025 SnapfaceID. All rights reserved.
+            </p>
+            <Link href="/admin" className="text-gray-600 hover:text-gray-400 transition-colors text-xs">
+              Admin
+            </Link>
+          </div>
           <div className="flex space-x-6 mt-4 md:mt-0">
             <a href="#" className="text-gray-400 hover:text-white transition-colors">
               <svg className="h-6 w-6" fill="currentColor" viewBox="0 0 24 24">

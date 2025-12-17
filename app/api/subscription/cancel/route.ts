@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 
+// Backend URL for cancellation
+const BACKEND_URL = process.env.BACKEND_API_URL || process.env.BACKEND_URL || 'http://localhost:8001'
+
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
@@ -13,57 +16,48 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // TODO: Cancel Stripe subscription
-    // TODO: Update user status in database
-    // TODO: Send cancellation confirmation email
-    // TODO: Store cancellation reason for analytics
-
-    // For now, log the cancellation request
-    console.log('Subscription cancellation:', {
+    console.log('Subscription cancellation request:', {
       email,
       phone,
       reason,
-      feedback,
       timestamp: new Date().toISOString(),
     })
 
-    // Simulate API calls
-    // In production, this should:
-    // 1. Call Stripe API to cancel subscription
-    // 2. Update user status in your database
-    // 3. Send confirmation emails
+    // Call backend API to cancel subscription
+    const backendResponse = await fetch(`${BACKEND_URL}/stripe/cancel-subscription-website`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ email, phone, reason, feedback }),
+    })
 
-    // Example Stripe cancellation (pseudo-code):
-    // const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY)
-    // const subscription = await stripe.subscriptions.cancel(subscriptionId, {
-    //   cancel_at_period_end: true, // Let them use until period ends
-    // })
+    const backendData = await backendResponse.json()
 
-    // Call your backend API
-    // const response = await fetch('YOUR_BACKEND_URL/api/subscription/cancel', {
-    //   method: 'POST',
-    //   headers: {
-    //     'Content-Type': 'application/json',
-    //   },
-    //   body: JSON.stringify({ email, phone, reason, feedback }),
-    // })
+    if (!backendResponse.ok) {
+      console.error('Backend cancellation failed:', backendData)
+      return NextResponse.json(
+        { error: backendData.detail || 'Failed to cancel subscription' },
+        { status: backendResponse.status }
+      )
+    }
 
-    // Mock cancellation success
-    const currentPeriodEnd = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
+    console.log('Subscription canceled successfully:', backendData)
 
     return NextResponse.json(
       {
         success: true,
-        message: 'Subscription canceled successfully',
+        message: backendData.message || 'Subscription canceled successfully',
         canceledAt: new Date().toISOString(),
-        accessUntil: currentPeriodEnd.toISOString(),
+        accessUntil: backendData.period_end_formatted || 'End of billing period',
+        periodEnd: backendData.period_end,
       },
       { status: 200 }
     )
   } catch (error) {
     console.error('Error canceling subscription:', error)
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: 'Internal server error. Please try again or contact support.' },
       { status: 500 }
     )
   }

@@ -159,10 +159,25 @@ export default function CancelSubscriptionPage() {
               <p className="text-gray-600 mb-6">
                 Please enter your account information to verify your subscription.
               </p>
+
+              {/* Important notice about Stripe email */}
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+                <div className="flex items-start">
+                  <span className="text-blue-500 text-xl mr-3">ℹ️</span>
+                  <div>
+                    <h4 className="font-semibold text-blue-900 mb-1">Important</h4>
+                    <p className="text-blue-800 text-sm">
+                      Please use the <strong>same email address</strong> you used when you subscribed through Stripe.
+                      This is the email where you receive your payment receipts.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
               <form onSubmit={handleVerify} className="space-y-6">
                 <div>
                   <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
-                    Email Address *
+                    Stripe Email Address *
                   </label>
                   <input
                     type="email"
@@ -171,8 +186,9 @@ export default function CancelSubscriptionPage() {
                     onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                     required
                     className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition"
-                    placeholder="john@example.com"
+                    placeholder="your-stripe-email@example.com"
                   />
+                  <p className="text-xs text-gray-500 mt-1">The email you used when subscribing to SnapfaceID Premium</p>
                 </div>
                 <div>
                   <label htmlFor="phone" className="block text-sm font-medium text-gray-700 mb-2">
@@ -187,6 +203,7 @@ export default function CancelSubscriptionPage() {
                     className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition"
                     placeholder="+1 (234) 567-890"
                   />
+                  <p className="text-xs text-gray-500 mt-1">The phone number registered in your SnapfaceID account</p>
                 </div>
                 {error && (
                   <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-red-800">
@@ -282,23 +299,24 @@ export default function CancelSubscriptionPage() {
                 <ul className="space-y-2 text-yellow-800">
                   <li>✓ Your subscription will remain active until the end of your billing period</li>
                   <li>✓ You'll lose access to Guardian protection and real-time safety features</li>
-                  <li>✓ Your profile will be removed from search results</li>
                   <li>✓ All your reviews and ratings will remain visible to the community</li>
                   <li>✓ You can reactivate your subscription anytime</li>
                 </ul>
               </div>
 
-              <div className="bg-purple-50 border border-purple-200 rounded-lg p-6 mb-6">
-                <h3 className="font-bold text-purple-900 mb-3">Special Offer: Stay with us!</h3>
-                <p className="text-purple-800 mb-4">
-                  We value your safety. Get 50% off your next 3 months if you keep your subscription active.
+              {/* Free account information */}
+              <div className="bg-green-50 border border-green-200 rounded-lg p-6 mb-6">
+                <h3 className="font-bold text-green-900 mb-3">Good news: You can continue as a Free User!</h3>
+                <p className="text-green-800 mb-3">
+                  After your billing period ends, your account will automatically convert to a <strong>Free account</strong>.
+                  You'll still be able to:
                 </p>
-                <button
-                  onClick={() => setStep('verify')}
-                  className="w-full bg-secondary text-white py-3 rounded-lg font-semibold hover:bg-secondary-dark transition"
-                >
-                  Claim Offer & Keep Subscription
-                </button>
+                <ul className="space-y-2 text-green-800">
+                  <li>• Access the app and browse profiles</li>
+                  <li>• View reviews and ratings from the community</li>
+                  <li>• Search by phone number (limited searches)</li>
+                  <li>• Upgrade back to Premium anytime</li>
+                </ul>
               </div>
 
               {error && (
@@ -340,9 +358,11 @@ export default function CancelSubscriptionPage() {
                 <h3 className="font-bold text-blue-900 mb-2">What happens next?</h3>
                 <ul className="space-y-2 text-blue-800">
                   <li>• A confirmation email has been sent to {formData.email}</li>
-                  <li>• Your subscription will end on [END DATE]</li>
+                  <li>• Your Premium access continues until the end of your billing period</li>
                   <li>• No further charges will be made</li>
-                  <li>• You can reactivate anytime before the end date</li>
+                  <li>• After that, your account will convert to a <strong>Free account</strong></li>
+                  <li>• You can continue using the app with Free features</li>
+                  <li>• You can reactivate Premium anytime</li>
                 </ul>
               </div>
               <div className="space-y-3">

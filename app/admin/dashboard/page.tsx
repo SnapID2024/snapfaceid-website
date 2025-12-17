@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 
@@ -19,6 +19,9 @@ interface Alert {
   activatedAt: string;
   lastCheckIn: string;
   status: 'active' | 'no_response' | 'safe' | 'emergency';
+  flyerUrl?: string;
+  emergencyContactPhone?: string;
+  emergencyContactName?: string;
   currentLocation: {
     latitude: number;
     longitude: number;
@@ -26,100 +29,68 @@ interface Alert {
   };
 }
 
-// Mock data for demonstration
-const mockAlerts: Alert[] = [
-  {
-    id: '1',
-    userId: 'user1',
-    userName: 'Sarah Johnson',
-    userPhone: '+1 (555) 123-4567',
-    userPhotoUrl: 'https://d64gsuwffb70l.cloudfront.net/693a27a7cd2193dc0cec21a3_1765421154062_3e73960b.jpg',
-    datePhotoUrl: 'https://d64gsuwffb70l.cloudfront.net/693a27a7cd2193dc0cec21a3_1765421192739_9446dbac.jpg',
-    dateName: 'Michael Chen',
-    datePhone: '+1 (555) 987-6543',
-    dateLocation: 'The Blue Moon Cafe, 123 Main St',
-    activatedAt: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
-    lastCheckIn: new Date(Date.now() - 15 * 60 * 1000).toISOString(),
-    status: 'active',
-    currentLocation: { latitude: 40.7128, longitude: -74.006, timestamp: new Date().toISOString() },
-  },
-  {
-    id: '2',
-    userId: 'user2',
-    userName: 'Emily Davis',
-    userPhone: '+1 (555) 234-5678',
-    userPhotoUrl: 'https://d64gsuwffb70l.cloudfront.net/693a27a7cd2193dc0cec21a3_1765421156705_66c71fd9.jpg',
-    datePhotoUrl: 'https://d64gsuwffb70l.cloudfront.net/693a27a7cd2193dc0cec21a3_1765421200138_106e3a79.png',
-    dateName: 'James Wilson',
-    datePhone: '+1 (555) 876-5432',
-    dateLocation: 'Riverside Restaurant, 456 Oak Ave',
-    activatedAt: new Date(Date.now() - 3 * 60 * 60 * 1000).toISOString(),
-    lastCheckIn: new Date(Date.now() - 45 * 60 * 1000).toISOString(),
-    status: 'no_response',
-    currentLocation: { latitude: 40.758, longitude: -73.9855, timestamp: new Date().toISOString() },
-  },
-  {
-    id: '3',
-    userId: 'user3',
-    userName: 'Jessica Martinez',
-    userPhone: '+1 (555) 345-6789',
-    userPhotoUrl: 'https://d64gsuwffb70l.cloudfront.net/693a27a7cd2193dc0cec21a3_1765421157049_3996d130.jpg',
-    datePhotoUrl: 'https://d64gsuwffb70l.cloudfront.net/693a27a7cd2193dc0cec21a3_1765421197686_9e790631.png',
-    dateName: 'David Brown',
-    datePhone: '+1 (555) 765-4321',
-    dateLocation: 'Central Park, NYC',
-    activatedAt: new Date(Date.now() - 1 * 60 * 60 * 1000).toISOString(),
-    lastCheckIn: new Date(Date.now() - 5 * 60 * 1000).toISOString(),
-    status: 'active',
-    currentLocation: { latitude: 40.7829, longitude: -73.9654, timestamp: new Date().toISOString() },
-  },
-  {
-    id: '4',
-    userId: 'user4',
-    userName: 'Amanda Thompson',
-    userPhone: '+1 (555) 456-7890',
-    userPhotoUrl: 'https://d64gsuwffb70l.cloudfront.net/693a27a7cd2193dc0cec21a3_1765421158278_8bd5ef4f.jpg',
-    datePhotoUrl: 'https://d64gsuwffb70l.cloudfront.net/693a27a7cd2193dc0cec21a3_1765421200995_3e5396ad.png',
-    dateName: 'Robert Garcia',
-    datePhone: '+1 (555) 654-3210',
-    dateLocation: 'Skyline Rooftop Bar, 789 High St',
-    activatedAt: new Date(Date.now() - 4 * 60 * 60 * 1000).toISOString(),
-    lastCheckIn: new Date(Date.now() - 90 * 60 * 1000).toISOString(),
-    status: 'emergency',
-    currentLocation: { latitude: 40.7484, longitude: -73.9857, timestamp: new Date().toISOString() },
-  },
-  {
-    id: '5',
-    userId: 'user5',
-    userName: 'Rachel Kim',
-    userPhone: '+1 (555) 567-8901',
-    userPhotoUrl: 'https://d64gsuwffb70l.cloudfront.net/693a27a7cd2193dc0cec21a3_1765421170381_cb4403d0.png',
-    datePhotoUrl: 'https://d64gsuwffb70l.cloudfront.net/693a27a7cd2193dc0cec21a3_1765421196215_36309076.jpg',
-    dateName: 'Thomas Lee',
-    datePhone: '+1 (555) 543-2109',
-    dateLocation: 'Harbor View Restaurant',
-    activatedAt: new Date(Date.now() - 5 * 60 * 60 * 1000).toISOString(),
-    lastCheckIn: new Date(Date.now() - 10 * 60 * 1000).toISOString(),
-    status: 'safe',
-    currentLocation: { latitude: 40.6892, longitude: -74.0445, timestamp: new Date().toISOString() },
-  },
-];
-
 type FilterType = 'all' | 'active' | 'no_response' | 'emergency';
 
 export default function AdminDashboard() {
   const router = useRouter();
-  const [alerts, setAlerts] = useState<Alert[]>(mockAlerts);
+  const [alerts, setAlerts] = useState<Alert[]>([]);
   const [selectedAlert, setSelectedAlert] = useState<Alert | null>(null);
   const [filter, setFilter] = useState<FilterType>('all');
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
+
+  const fetchAlerts = useCallback(async () => {
+    const token = localStorage.getItem('adminToken');
+    if (!token) {
+      router.push('/admin');
+      return;
+    }
+
+    try {
+      const response = await fetch('/api/admin/guardian-alerts', {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+
+      if (response.status === 401) {
+        localStorage.removeItem('adminToken');
+        router.push('/admin');
+        return;
+      }
+
+      const data = await response.json();
+
+      if (data.alerts) {
+        setAlerts(data.alerts);
+        setLastUpdated(new Date());
+        setError(null);
+      }
+    } catch (err) {
+      console.error('Error fetching alerts:', err);
+      setError('Unable to fetch alerts. Backend may be offline.');
+    } finally {
+      setIsLoading(false);
+    }
+  }, [router]);
 
   useEffect(() => {
     // Check if admin is logged in
     const token = localStorage.getItem('adminToken');
     if (!token) {
       router.push('/admin');
+      return;
     }
-  }, [router]);
+
+    // Fetch alerts immediately
+    fetchAlerts();
+
+    // Set up polling every 30 seconds for real-time updates
+    const interval = setInterval(fetchAlerts, 30000);
+
+    return () => clearInterval(interval);
+  }, [router, fetchAlerts]);
 
   const handleLogout = () => {
     localStorage.removeItem('adminToken');
@@ -173,13 +144,36 @@ export default function AdminDashboard() {
   };
 
   const handleAlertAuthorities = () => {
-    alert('Alerting local authorities... (Demo)');
+    if (selectedAlert) {
+      const { dateLocation, userPhone, datePhone, userName } = selectedAlert;
+      const message = `Emergency Alert for ${userName}:\nLocation: ${dateLocation}\nUser Phone: ${userPhone}\nDate Phone: ${datePhone}`;
+      alert(`Preparing to alert authorities...\n\n${message}\n\nIn production, this would connect to 911 dispatch.`);
+    }
   };
 
-  const handleMarkSafe = (alertId: string) => {
-    setAlerts((prev) => prev.map((a) => (a.id === alertId ? { ...a, status: 'safe' as const } : a)));
-    if (selectedAlert?.id === alertId) {
-      setSelectedAlert((prev) => (prev ? { ...prev, status: 'safe' } : null));
+  const handleMarkSafe = async (alertId: string) => {
+    const token = localStorage.getItem('adminToken');
+    try {
+      const response = await fetch(`/api/admin/guardian-alerts/${alertId}/mark-safe`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+
+      if (response.ok) {
+        setAlerts((prev) => prev.map((a) => (a.id === alertId ? { ...a, status: 'safe' as const } : a)));
+        if (selectedAlert?.id === alertId) {
+          setSelectedAlert((prev) => (prev ? { ...prev, status: 'safe' } : null));
+        }
+      }
+    } catch (err) {
+      console.error('Error marking safe:', err);
+      // Still update UI optimistically
+      setAlerts((prev) => prev.map((a) => (a.id === alertId ? { ...a, status: 'safe' as const } : a)));
+      if (selectedAlert?.id === alertId) {
+        setSelectedAlert((prev) => (prev ? { ...prev, status: 'safe' } : null));
+      }
     }
   };
 
@@ -275,9 +269,56 @@ export default function AdminDashboard() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Alert List */}
           <div className="lg:col-span-1 space-y-4">
-            <h2 className="font-semibold text-gray-900">Guardian Alerts ({filteredAlerts.length})</h2>
-            <div className="space-y-3 max-h-[calc(100vh-250px)] overflow-y-auto">
-              {filteredAlerts.map((alert) => (
+            <div className="flex items-center justify-between">
+              <h2 className="font-semibold text-gray-900">Guardian Alerts ({filteredAlerts.length})</h2>
+              {lastUpdated && (
+                <span className="text-xs text-gray-500">
+                  Updated: {lastUpdated.toLocaleTimeString()}
+                </span>
+              )}
+            </div>
+
+            {/* Loading State */}
+            {isLoading && (
+              <div className="bg-white rounded-xl p-8 shadow-sm text-center">
+                <div className="w-8 h-8 border-4 border-[#6A1B9A] border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+                <p className="text-gray-500">Loading alerts...</p>
+              </div>
+            )}
+
+            {/* Error State */}
+            {error && !isLoading && (
+              <div className="bg-red-50 border border-red-200 rounded-xl p-4 text-center">
+                <svg className="h-8 w-8 text-red-400 mx-auto mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+                <p className="text-red-700 text-sm">{error}</p>
+                <button
+                  onClick={fetchAlerts}
+                  className="mt-3 text-sm text-[#6A1B9A] hover:underline"
+                >
+                  Retry
+                </button>
+              </div>
+            )}
+
+            {/* Empty State */}
+            {!isLoading && !error && filteredAlerts.length === 0 && (
+              <div className="bg-white rounded-xl p-8 shadow-sm text-center">
+                <svg className="h-12 w-12 text-gray-300 mx-auto mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                </svg>
+                <h3 className="font-semibold text-gray-900 mb-1">No Active Alerts</h3>
+                <p className="text-gray-500 text-sm">
+                  {filter === 'all'
+                    ? 'All users are safe. No Guardian alerts in the last 24 hours.'
+                    : `No alerts with "${filter}" status.`}
+                </p>
+              </div>
+            )}
+
+            <div className="space-y-3 max-h-[calc(100vh-300px)] overflow-y-auto">
+              {!isLoading && filteredAlerts.map((alert) => (
                 <div
                   key={alert.id}
                   onClick={() => setSelectedAlert(alert)}
@@ -286,7 +327,7 @@ export default function AdminDashboard() {
                   }`}
                 >
                   <div className="flex items-start gap-3">
-                    <img src={alert.userPhotoUrl} alt={alert.userName} className="w-12 h-12 rounded-full object-cover" />
+                    <img src={alert.userPhotoUrl || '/placeholder-user.png'} alt={alert.userName} className="w-12 h-12 rounded-full object-cover bg-gray-200" />
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center justify-between gap-2">
                         <h3 className="font-semibold text-gray-900 truncate">{alert.userName}</h3>

@@ -27,15 +27,25 @@ export default function AdminLoginPage() {
     }
 
     try {
-      // Simulate authentication - in production, connect to your backend
-      await new Promise((resolve) => setTimeout(resolve, 1000));
+      const response = await fetch('/api/admin/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(credentials),
+      });
 
-      // For demo purposes, allow any credentials
-      localStorage.setItem('adminToken', 'demo-session');
-      localStorage.setItem('adminUser', credentials.username);
-      router.push('/admin/dashboard');
+      const data = await response.json();
+
+      if (response.ok && data.success) {
+        localStorage.setItem('adminToken', data.token);
+        localStorage.setItem('adminUser', credentials.username);
+        router.push('/admin/dashboard');
+      } else {
+        setError(data.error || 'Invalid credentials. Please try again.');
+      }
     } catch (err) {
-      setError('An error occurred. Please try again.');
+      setError('Connection error. Please check your network and try again.');
     } finally {
       setIsLoading(false);
     }
