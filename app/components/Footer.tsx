@@ -83,14 +83,14 @@ const Footer: React.FC<FooterProps> = ({ simplified = false }) => {
                 </Link>
               </li>
               <li>
-                <a href="#" className="text-gray-400 hover:text-white transition-colors">
+                <Link href="/privacy" className="text-gray-400 hover:text-white transition-colors">
                   Privacy Policy
-                </a>
+                </Link>
               </li>
               <li>
-                <a href="#" className="text-gray-400 hover:text-white transition-colors">
+                <Link href="/terms" className="text-gray-400 hover:text-white transition-colors">
                   Terms of Service
-                </a>
+                </Link>
               </li>
             </ul>
           </div>
@@ -100,14 +100,14 @@ const Footer: React.FC<FooterProps> = ({ simplified = false }) => {
             <h3 className="font-semibold text-lg mb-4">Support</h3>
             <ul className="space-y-2">
               <li>
-                <a href="#" className="text-gray-400 hover:text-white transition-colors">
+                <Link href="/contact" className="text-gray-400 hover:text-white transition-colors">
                   Help Center
-                </a>
+                </Link>
               </li>
               <li>
-                <a href="#" className="text-gray-400 hover:text-white transition-colors">
+                <Link href="/contact" className="text-gray-400 hover:text-white transition-colors">
                   FAQ
-                </a>
+                </Link>
               </li>
               <li>
                 <Link href="/cancel-subscription" className="text-gray-400 hover:text-white transition-colors">
