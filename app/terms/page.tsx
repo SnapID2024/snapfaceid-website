@@ -128,6 +128,69 @@ IMPORTANT:
 • Guardian does NOT replace emergency services (911)`,
   },
   {
+    title: '9A. AUTHORIZATION TO CONTACT EMERGENCY SERVICES (911)',
+    body: `IMPORTANT - PLEASE READ CAREFULLY:
+
+BY ACTIVATING THE GUARDIAN FEATURE AND SUBSCRIBING TO OUR PREMIUM SERVICE, YOU EXPRESSLY AND IRREVOCABLY AUTHORIZE BELLA CRUZ COMPANY ("SNAPFACEID") TO:
+
+1. CONTACT EMERGENCY SERVICES ON YOUR BEHALF
+• Contact 911 or other emergency services in your jurisdiction if we reasonably believe you may be in imminent danger
+• This includes situations where you fail to respond to safety check-in notifications within the designated time period
+• Provide emergency responders with your personal information, location data, photographs, and any other relevant information collected through the Guardian feature
+
+2. SHARE YOUR INFORMATION WITH AUTHORITIES
+• Transmit your real-time or last known GPS coordinates to emergency services
+• Share photographs of you and/or your date with law enforcement
+• Provide contact information of your date to authorities
+• Disclose any other information we deem necessary to assist in locating you or ensuring your safety
+
+3. ACT IN GOOD FAITH
+• We will exercise reasonable judgment in determining when to contact emergency services
+• The decision to contact 911 is made automatically when safety check-ins are not completed AND/OR manually by our monitoring team if available
+
+LIMITATION OF LIABILITY FOR EMERGENCY SERVICES CONTACT:
+
+YOU EXPRESSLY ACKNOWLEDGE AND AGREE THAT:
+
+• Bella Cruz Company SHALL NOT BE LIABLE for any consequences, damages, costs, expenses, legal fees, fines, or penalties arising from our contact with emergency services on your behalf, including but not limited to:
+  - False alarms or unnecessary emergency responses
+  - Delayed or failed communication with emergency services
+  - Inaccurate location data transmitted to authorities
+  - Actions taken by emergency responders
+  - Any charges or fines imposed by emergency services for false alarms
+  - Embarrassment, reputational harm, or inconvenience
+
+• YOU ASSUME FULL RESPONSIBILITY for:
+  - The accuracy of all information you provide (location, contact details, photographs)
+  - Ensuring your emergency contact information is current and valid
+  - Responding to safety check-in notifications in a timely manner
+  - Any legal consequences resulting from false or misleading information
+  - Any costs associated with emergency response to false alarms
+
+• IN NO EVENT shall Bella Cruz Company be liable for any failure to contact emergency services, delays in contacting emergency services, or any harm that occurs regardless of whether emergency services were contacted
+
+USER ACKNOWLEDGMENTS:
+
+By using the Guardian feature, you acknowledge and agree that:
+
+✓ You grant express consent and authorization for us to contact 911 on your behalf
+✓ You understand that emergency services may be dispatched to your location
+✓ You accept full financial responsibility for any false alarm fees or penalties
+✓ You release and hold harmless Bella Cruz Company from any liability related to emergency services contact
+✓ You understand this authorization cannot be revoked once Guardian is activated for a session
+✓ You confirm that all information provided is accurate and truthful
+✓ You understand that communication failures may occur and we are not liable for such failures
+
+INDEMNIFICATION:
+
+You agree to INDEMNIFY, DEFEND, and HOLD HARMLESS Bella Cruz Company, its officers, directors, employees, agents, and affiliates from and against any and all claims, damages, losses, costs, and expenses (including reasonable attorney fees) arising from or related to:
+• Our contact with emergency services on your behalf
+• Any false alarm or unnecessary emergency response
+• Inaccurate information you provided
+• Your use or misuse of the Guardian feature
+• Any violation of these terms`,
+  },
+  {
     title: '10. Third-Party Services',
     body: `Your information is shared with the following providers to operate the service:
 
