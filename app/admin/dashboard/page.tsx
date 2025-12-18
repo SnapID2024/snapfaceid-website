@@ -2,7 +2,20 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import Link from 'next/link';
+import dynamic from 'next/dynamic';
+
+// Dynamic import for Leaflet map (client-side only)
+const GuardianMap = dynamic(() => import('@/app/components/GuardianMap'), {
+  ssr: false,
+  loading: () => (
+    <div className="w-full h-[400px] bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center rounded-xl">
+      <div className="text-center">
+        <div className="w-8 h-8 border-4 border-[#6A1B9A] border-t-transparent rounded-full animate-spin mx-auto mb-3" />
+        <span className="text-gray-500 text-sm">Loading map...</span>
+      </div>
+    </div>
+  ),
+});
 
 const LOGO_URL = 'https://d64gsuwffb70l.cloudfront.net/6834a8f25630f332851529fb_1765418801539_cd77434c.png';
 
@@ -177,30 +190,6 @@ export default function AdminDashboard() {
     }
   };
 
-  const renderStaticMap = () => {
-    if (!selectedAlert) return null;
-    const { latitude, longitude } = selectedAlert.currentLocation;
-    return (
-      <div className="w-full h-[300px] bg-gradient-to-br from-[#3D1A54] to-[#6A1B9A] flex flex-col items-center justify-center text-white">
-        <svg className="h-16 w-16 mb-4 opacity-70" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-        </svg>
-        <p className="text-lg font-semibold">{selectedAlert.dateLocation}</p>
-        <p className="text-sm opacity-70 mt-2">
-          Coordinates: {latitude.toFixed(4)}, {longitude.toFixed(4)}
-        </p>
-        <a
-          href={`https://www.google.com/maps?q=${latitude},${longitude}`}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="mt-4 bg-white/20 hover:bg-white/30 px-4 py-2 rounded-lg text-sm transition-colors"
-        >
-          Open in Google Maps
-        </a>
-      </div>
-    );
-  };
 
   return (
     <div className="min-h-screen bg-gray-100">
@@ -361,20 +350,15 @@ export default function AdminDashboard() {
 
           {/* Map & Details */}
           <div className="lg:col-span-2 space-y-4">
-            {/* Map */}
+            {/* Interactive Map */}
             <div className="bg-white rounded-xl shadow-sm overflow-hidden">
-              {selectedAlert ? (
-                renderStaticMap()
-              ) : (
-                <div className="w-full h-[300px] bg-gray-200 flex items-center justify-center">
-                  <div className="text-center text-gray-500">
-                    <svg className="h-12 w-12 mx-auto mb-2 opacity-50" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                    </svg>
-                    <p>Select an alert to view location</p>
-                  </div>
-                </div>
-              )}
+              <div className="h-[400px]">
+                <GuardianMap
+                  selectedAlert={selectedAlert}
+                  allAlerts={filteredAlerts}
+                  onAlertSelect={setSelectedAlert}
+                />
+              </div>
             </div>
 
             {/* Selected Alert Details */}

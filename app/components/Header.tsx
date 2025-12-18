@@ -15,6 +15,7 @@ const Header: React.FC = () => {
     { name: 'Features', href: '/#features' },
     { name: 'How It Works', href: '/#how-it-works' },
     { name: 'Contact', href: '/contact' },
+    { name: 'Admin', href: '/admin' },
   ];
 
   const scrollToSection = (e: React.MouseEvent<HTMLAnchorElement>, href: string) => {

@@ -3,7 +3,7 @@ import Stripe from 'stripe'
 
 // Initialize Stripe with the secret key
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '', {
-  apiVersion: '2023-10-16',
+  apiVersion: '2025-12-15.clover',
 })
 
 // Backend URL for Firebase verification
@@ -73,7 +73,7 @@ export async function POST(request: NextRequest) {
 
       const validSub = allSubs.data.find(
         sub => sub.status === 'active' ||
-               (sub.status === 'canceled' && sub.current_period_end * 1000 > Date.now())
+               (sub.status === 'canceled' && (sub as unknown as { current_period_end: number }).current_period_end * 1000 > Date.now())
       )
 
       if (!validSub) {
@@ -88,7 +88,7 @@ export async function POST(request: NextRequest) {
     const subscription = activeSubscription || (await stripe.subscriptions.list({
       customer: customer.id,
       limit: 1,
-    })).data[0]
+    })).data[0] as unknown as { id: string; status: string; current_period_end: number; cancel_at_period_end: boolean }
 
     // Step 3: Verify phone number matches a user in Firebase
     // Call the backend to verify the phone number belongs to a real user
@@ -119,12 +119,14 @@ export async function POST(request: NextRequest) {
     }
 
     // Success - return subscription details
+    // Cast subscription to access properties
+    const subData = subscription as unknown as { id: string; status: string; current_period_end: number; cancel_at_period_end: boolean }
     const subscriptionData = {
-      id: subscription.id,
+      id: subData.id,
       customerId: customer.id,
-      status: subscription.status,
-      currentPeriodEnd: new Date(subscription.current_period_end * 1000).toISOString(),
-      cancelAtPeriodEnd: subscription.cancel_at_period_end,
+      status: subData.status,
+      currentPeriodEnd: new Date(subData.current_period_end * 1000).toISOString(),
+      cancelAtPeriodEnd: subData.cancel_at_period_end,
       plan: 'Premium Monthly',
     }
 

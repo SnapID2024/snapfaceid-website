@@ -4,7 +4,7 @@ import { NextRequest, NextResponse } from 'next/server'
 const BACKEND_URL = process.env.BACKEND_API_URL || process.env.BACKEND_URL || 'http://localhost:8001'
 
 // Simple token validation (matches the token format from login)
-function validateAdminToken(token: string | null): boolean {
+function validateAdminToken(token: string | null | undefined): boolean {
   if (!token) return false
   try {
     const decoded = Buffer.from(token, 'base64').toString('utf-8')
