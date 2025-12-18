@@ -1,10 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server'
 import Stripe from 'stripe'
 
-// Initialize Stripe with the secret key
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '', {
-  apiVersion: '2025-12-15.clover',
-})
+// Initialize Stripe lazily to avoid build-time errors
+function getStripe() {
+  const key = process.env.STRIPE_SECRET_KEY
+  if (!key) {
+    throw new Error('STRIPE_SECRET_KEY is not configured')
+  }
+  return new Stripe(key, {
+    apiVersion: '2025-12-15.clover',
+  })
+}
 
 // Backend URL for Firebase verification
 const BACKEND_URL = process.env.BACKEND_API_URL || process.env.BACKEND_URL || 'http://localhost:8001'
@@ -30,6 +36,9 @@ export async function POST(request: NextRequest) {
 
     // Normalize phone number (remove spaces, dashes, etc.)
     const normalizedPhone = phone.replace(/[\s\-\(\)]/g, '')
+
+    // Get Stripe instance
+    const stripe = getStripe()
 
     // Step 1: Search for customer in Stripe by email
     const customers = await stripe.customers.list({
