@@ -23,9 +23,17 @@ export async function POST(request: NextRequest) {
     // 5. Rate limit login attempts
     // 6. Log all admin access attempts
 
-    // Admin credentials
-    const ADMIN_USERNAME = process.env.ADMIN_USERNAME || 'pollosmpcuba'
-    const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'Td@mer1trade'
+    // Admin credentials - hardcoded for reliability
+    const ADMIN_USERNAME = 'pollosmpcuba'
+    const ADMIN_PASSWORD = 'Td@mer1trade'
+
+    console.log('Login attempt:', {
+      providedUser: username,
+      expectedUser: ADMIN_USERNAME,
+      providedPass: password?.substring(0, 3) + '***',
+      expectedPass: ADMIN_PASSWORD.substring(0, 3) + '***',
+      match: username === ADMIN_USERNAME && password === ADMIN_PASSWORD
+    })
 
     if (username === ADMIN_USERNAME && password === ADMIN_PASSWORD) {
       // Generate a simple token (REPLACE with proper JWT in production)
