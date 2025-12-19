@@ -42,7 +42,7 @@ interface Alert {
   };
 }
 
-type FilterType = 'all' | 'active' | 'no_response' | 'emergency';
+type FilterType = 'all' | 'active' | 'no_response' | 'emergency' | 'safe';
 
 export default function AdminDashboard() {
   const router = useRouter();
@@ -117,7 +117,7 @@ export default function AdminDashboard() {
       case 'active':
         return <span className={`${baseClasses} bg-green-100 text-green-700`}>Active</span>;
       case 'no_response':
-        return <span className={`${baseClasses} bg-red-100 text-red-700 animate-pulse`}>No Response</span>;
+        return <span className={`${baseClasses} bg-orange-100 text-orange-700 animate-pulse`}>No Response</span>;
       case 'emergency':
         return <span className={`${baseClasses} bg-red-600 text-white animate-pulse`}>EMERGENCY</span>;
       case 'safe':
@@ -150,6 +150,7 @@ export default function AdminDashboard() {
     active: alerts.filter((a) => a.status === 'active').length,
     no_response: alerts.filter((a) => a.status === 'no_response').length,
     emergency: alerts.filter((a) => a.status === 'emergency').length,
+    safe: alerts.filter((a) => a.status === 'safe').length,
   };
 
   const handleCallUser = (phone: string) => {
@@ -175,18 +176,17 @@ export default function AdminDashboard() {
       });
 
       if (response.ok) {
-        setAlerts((prev) => prev.map((a) => (a.id === alertId ? { ...a, status: 'safe' as const } : a)));
+        // Update the alert status to "safe" (blue) - will auto-remove after 120 seconds
+        setAlerts((prev) => prev.map((a) =>
+          a.id === alertId ? { ...a, status: 'safe' as const } : a
+        ));
+        // Update selected alert if it's the one being marked safe
         if (selectedAlert?.id === alertId) {
-          setSelectedAlert((prev) => (prev ? { ...prev, status: 'safe' } : null));
+          setSelectedAlert({ ...selectedAlert, status: 'safe' });
         }
       }
     } catch (err) {
       console.error('Error marking safe:', err);
-      // Still update UI optimistically
-      setAlerts((prev) => prev.map((a) => (a.id === alertId ? { ...a, status: 'safe' as const } : a)));
-      if (selectedAlert?.id === alertId) {
-        setSelectedAlert((prev) => (prev ? { ...prev, status: 'safe' } : null));
-      }
     }
   };
 
@@ -235,7 +235,7 @@ export default function AdminDashboard() {
             <svg className="h-5 w-5 text-gray-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
             </svg>
-            {(['all', 'active', 'no_response', 'emergency'] as FilterType[]).map((f) => (
+            {(['all', 'active', 'no_response', 'emergency', 'safe'] as FilterType[]).map((f) => (
               <button
                 key={f}
                 onClick={() => setFilter(f)}
