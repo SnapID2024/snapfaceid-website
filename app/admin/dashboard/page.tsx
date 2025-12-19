@@ -99,11 +99,41 @@ export default function AdminDashboard() {
     // Fetch alerts immediately
     fetchAlerts();
 
-    // Set up polling every 30 seconds for real-time updates
-    const interval = setInterval(fetchAlerts, 30000);
+    // Smart polling: faster when there are alerts, slower when empty
+    let intervalId: NodeJS.Timeout;
 
-    return () => clearInterval(interval);
-  }, [router, fetchAlerts]);
+    const setupPolling = () => {
+      // If there are any alerts (including safe), poll every 15 seconds
+      // If no alerts, poll every 60 seconds to save resources
+      const hasAlerts = alerts.length > 0;
+      const pollInterval = hasAlerts ? 15000 : 60000;
+
+      if (intervalId) clearInterval(intervalId);
+      intervalId = setInterval(fetchAlerts, pollInterval);
+    };
+
+    setupPolling();
+
+    // Re-setup polling when alerts change
+    const alertsChangeHandler = () => setupPolling();
+
+    // Only poll when tab is visible
+    const handleVisibilityChange = () => {
+      if (document.hidden) {
+        if (intervalId) clearInterval(intervalId);
+      } else {
+        fetchAlerts(); // Fetch immediately when tab becomes visible
+        setupPolling();
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      if (intervalId) clearInterval(intervalId);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [router, fetchAlerts, alerts.length]);
 
   const handleLogout = () => {
     localStorage.removeItem('adminToken');
