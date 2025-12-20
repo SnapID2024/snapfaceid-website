@@ -44,14 +44,34 @@ interface Alert {
 
 type FilterType = 'all' | 'active' | 'no_response' | 'emergency' | 'safe';
 
+// Función para obtener el color y texto del estado
+const getStatusDisplay = (status: Alert['status']) => {
+  switch (status) {
+    case 'active':
+      return { color: 'bg-green-500', text: 'Active', textColor: 'text-green-700', bgLight: 'bg-green-100' };
+    case 'no_response':
+      return { color: 'bg-orange-500 animate-pulse', text: 'No Response', textColor: 'text-orange-700', bgLight: 'bg-orange-100' };
+    case 'emergency':
+      return { color: 'bg-red-600 animate-pulse', text: 'EMERGENCY', textColor: 'text-red-700', bgLight: 'bg-red-100' };
+    case 'safe':
+      return { color: 'bg-blue-500', text: 'Safe', textColor: 'text-blue-700', bgLight: 'bg-blue-100' };
+    default:
+      return { color: 'bg-gray-500', text: 'Unknown', textColor: 'text-gray-700', bgLight: 'bg-gray-100' };
+  }
+};
+
 export default function AdminDashboard() {
   const router = useRouter();
   const [alerts, setAlerts] = useState<Alert[]>([]);
   const [selectedAlert, setSelectedAlert] = useState<Alert | null>(null);
+  const [alertClickTimestamp, setAlertClickTimestamp] = useState<number>(0);
   const [filter, setFilter] = useState<FilterType>('all');
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
+  const [showEmergencyContact, setShowEmergencyContact] = useState(false);
+  const [showAlertAuthoritiesModal, setShowAlertAuthoritiesModal] = useState(false);
+  const [sendingAlert, setSendingAlert] = useState(false);
 
   const fetchAlerts = useCallback(async () => {
     const token = localStorage.getItem('adminToken');
@@ -79,6 +99,15 @@ export default function AdminDashboard() {
         setAlerts(data.alerts);
         setLastUpdated(new Date());
         setError(null);
+
+        // Actualizar selectedAlert con los datos frescos del servidor
+        setSelectedAlert(currentSelected => {
+          if (currentSelected) {
+            const updatedAlert = data.alerts.find((a: Alert) => a.id === currentSelected.id);
+            return updatedAlert || null; // Si ya no existe, deseleccionar
+          }
+          return currentSelected;
+        });
       }
     } catch (err) {
       console.error('Error fetching alerts:', err);
@@ -187,12 +216,90 @@ export default function AdminDashboard() {
     window.open(`tel:${phone}`, '_self');
   };
 
+  const handleSelectAlert = (alert: Alert) => {
+    setSelectedAlert(alert);
+    setAlertClickTimestamp(Date.now()); // Forzar re-render del mapa para centrar
+    setShowEmergencyContact(false); // Close popup when selecting different alert
+  };
+
   const handleAlertAuthorities = () => {
     if (selectedAlert) {
-      const { dateLocation, userPhone, datePhone, userName } = selectedAlert;
-      const message = `Emergency Alert for ${userName}:\nLocation: ${dateLocation}\nUser Phone: ${userPhone}\nDate Phone: ${datePhone}`;
-      alert(`Preparing to alert authorities...\n\n${message}\n\nIn production, this would connect to 911 dispatch.`);
+      setShowAlertAuthoritiesModal(true);
     }
+  };
+
+  const generateEmergencyMessage = () => {
+    if (!selectedAlert) return '';
+    const { userName, userPhone, dateName, datePhone, dateLocation, currentLocation, emergencyContactName, emergencyContactPhone } = selectedAlert;
+    const locationUrl = currentLocation && (currentLocation.latitude !== 0 || currentLocation.longitude !== 0)
+      ? `https://maps.google.com/?q=${currentLocation.latitude},${currentLocation.longitude}`
+      : 'GPS not available';
+
+    return `🚨 EMERGENCY ALERT - SnapfaceID Guardian
+
+User in potential danger:
+• Name: ${userName}
+• Phone: ${userPhone}
+
+Meeting with:
+• Name: ${dateName}
+• Phone: ${datePhone}
+• Location: ${dateLocation}
+
+GPS Coordinates: ${currentLocation?.latitude}, ${currentLocation?.longitude}
+Map Link: ${locationUrl}
+
+Emergency Contact:
+• Name: ${emergencyContactName || 'Not provided'}
+• Phone: ${emergencyContactPhone || 'Not provided'}
+
+Time: ${new Date().toLocaleString()}
+
+Please respond immediately.`;
+  };
+
+  const handleSendEmail = async () => {
+    if (!selectedAlert) return;
+    const subject = encodeURIComponent(`EMERGENCY: ${selectedAlert.userName} needs help`);
+    const body = encodeURIComponent(generateEmergencyMessage());
+    window.open(`mailto:?subject=${subject}&body=${body}`, '_blank');
+  };
+
+  const handleSendSMS = async () => {
+    if (!selectedAlert) return;
+    setSendingAlert(true);
+    try {
+      const token = localStorage.getItem('adminToken');
+      const response = await fetch('/api/admin/send-emergency-sms', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          alertId: selectedAlert.id,
+          message: generateEmergencyMessage(),
+          recipientPhone: selectedAlert.emergencyContactPhone,
+        }),
+      });
+
+      if (response.ok) {
+        alert('SMS sent successfully to emergency contact!');
+      } else {
+        const data = await response.json();
+        alert(`Failed to send SMS: ${data.error || 'Unknown error'}`);
+      }
+    } catch (err) {
+      console.error('Error sending SMS:', err);
+      alert('Failed to send SMS. Please try again.');
+    } finally {
+      setSendingAlert(false);
+    }
+  };
+
+  const handleCopyMessage = () => {
+    navigator.clipboard.writeText(generateEmergencyMessage());
+    alert('Message copied to clipboard!');
   };
 
   const handleMarkSafe = async (alertId: string) => {
@@ -265,20 +372,25 @@ export default function AdminDashboard() {
             <svg className="h-5 w-5 text-gray-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
             </svg>
-            {(['all', 'active', 'no_response', 'emergency', 'safe'] as FilterType[]).map((f) => (
-              <button
-                key={f}
-                onClick={() => setFilter(f)}
-                className={`px-4 py-2 rounded-lg font-medium text-sm whitespace-nowrap transition-all ${
-                  filter === f ? 'bg-[#6A1B9A] text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                }`}
-              >
-                {f === 'all' ? 'All Alerts' : f === 'no_response' ? 'No Response' : f.charAt(0).toUpperCase() + f.slice(1)}
-                <span className={`ml-2 px-2 py-0.5 rounded-full text-xs ${filter === f ? 'bg-white/20' : 'bg-gray-200'}`}>
-                  {alertCounts[f]}
-                </span>
-              </button>
-            ))}
+            {(['all', 'active', 'no_response', 'emergency', 'safe'] as FilterType[]).map((f) => {
+              const displayName = f === 'all' ? 'All Alerts' :
+                                  f === 'no_response' ? 'No Response' :
+                                  f.charAt(0).toUpperCase() + f.slice(1);
+              return (
+                <button
+                  key={f}
+                  onClick={() => setFilter(f)}
+                  className={`px-4 py-2 rounded-lg font-medium text-sm whitespace-nowrap transition-all ${
+                    filter === f ? 'bg-[#6A1B9A] text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                  }`}
+                >
+                  {displayName}
+                  <span className={`ml-2 px-2 py-0.5 rounded-full text-xs ${filter === f ? 'bg-white/20' : 'bg-gray-200'}`}>
+                    {alertCounts[f]}
+                  </span>
+                </button>
+              );
+            })}
           </div>
         </div>
       </div>
@@ -336,136 +448,167 @@ export default function AdminDashboard() {
               </div>
             )}
 
-            <div className="space-y-3 max-h-[calc(100vh-300px)] overflow-y-auto">
-              {!isLoading && filteredAlerts.map((alert) => (
-                <div
-                  key={alert.id}
-                  onClick={() => setSelectedAlert(alert)}
-                  className={`bg-white rounded-xl p-4 shadow-sm cursor-pointer transition-all hover:shadow-md ${
-                    selectedAlert?.id === alert.id ? 'ring-2 ring-[#6A1B9A]' : ''
-                  }`}
-                >
-                  <div className="flex items-start gap-3">
-                    <img src={alert.userPhotoUrl || '/placeholder-user.png'} alt={alert.userName} className="w-12 h-12 rounded-full object-cover bg-gray-200" />
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center justify-between gap-2">
-                        <h3 className="font-semibold text-gray-900 truncate">{alert.userName}</h3>
-                        {getStatusBadge(alert.status)}
-                      </div>
-                      <p className="text-sm text-gray-500">{alert.userPhone}</p>
-                      <div className="flex items-center gap-1 text-sm text-gray-500 mt-1">
-                        <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+            <div className="space-y-1.5 max-h-[calc(100vh-300px)] overflow-y-auto pr-1">
+              {!isLoading && filteredAlerts.map((alert) => {
+                const statusDisplay = getStatusDisplay(alert.status);
+                return (
+                  <div
+                    key={alert.id}
+                    onClick={() => handleSelectAlert(alert)}
+                    className={`rounded border cursor-pointer transition-all hover:bg-purple-50 px-2 py-1.5 ${
+                      selectedAlert?.id === alert.id
+                        ? 'border-[#6A1B9A] bg-purple-50 border-2'
+                        : 'border-[#6A1B9A]/30 bg-white'
+                    }`}
+                  >
+                    {/* Línea 1: Status + Nombre + Teléfono + Tiempo */}
+                    <div className="flex items-center gap-1.5 text-xs">
+                      <span className={`w-2 h-2 rounded-full flex-shrink-0 ${statusDisplay.color}`} />
+                      <span className="font-semibold text-gray-900 truncate">{alert.userName}</span>
+                      <span className="text-gray-400">•</span>
+                      <span className="text-gray-500 truncate">{alert.userPhone || 'No phone'}</span>
+                      <span className="text-gray-400 ml-auto flex-shrink-0">•</span>
+                      <span className="text-gray-400 flex-shrink-0">{getTimeSince(alert.lastCheckIn)}</span>
+                    </div>
+                    {/* Línea 2: Date / Ubicación */}
+                    <div className="flex items-center gap-1 text-xs text-gray-500 mt-0.5 pl-3.5">
+                      <span className="truncate">{alert.dateName}</span>
+                      <span className="text-gray-300">/</span>
+                      <span className="truncate flex-1">{alert.dateLocation}</span>
+                      {alert.currentLocation && (alert.currentLocation.latitude !== 0 || alert.currentLocation.longitude !== 0) && (
+                        <svg className="h-3 w-3 text-green-500 flex-shrink-0" fill="currentColor" viewBox="0 0 24 24">
+                          <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/>
                         </svg>
-                        <span className="truncate">Date: {alert.dateName}</span>
-                      </div>
-                      <div className="flex items-center gap-1 text-sm text-gray-500">
-                        <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                        </svg>
-                        <span className="truncate">{alert.dateLocation}</span>
-                      </div>
-                      <div className="flex items-center gap-1 text-sm text-gray-500">
-                        <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                        </svg>
-                        <span>Last check-in: {getTimeSince(alert.lastCheckIn)}</span>
-                      </div>
+                      )}
                     </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
 
           {/* Map & Details */}
           <div className="lg:col-span-2 space-y-4">
-            {/* Interactive Map */}
+            {/* Interactive Map - Expanded height */}
             <div className="bg-white rounded-xl shadow-sm overflow-hidden">
-              <div className="h-[400px]">
+              <div className="h-[550px]">
                 <GuardianMap
                   selectedAlert={selectedAlert}
                   allAlerts={filteredAlerts}
-                  onAlertSelect={setSelectedAlert}
+                  onAlertSelect={handleSelectAlert}
+                  centerTrigger={alertClickTimestamp}
                 />
               </div>
             </div>
 
-            {/* Selected Alert Details */}
+            {/* Selected Alert Details - Compact Layout */}
             {selectedAlert ? (
-              <div className="bg-white rounded-xl p-6 shadow-sm">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  {/* User Info */}
-                  <div>
-                    <h3 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
-                      <svg className="h-5 w-5 text-[#6A1B9A]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                      </svg>
-                      User Information
-                    </h3>
-                    <div className="flex items-center gap-4 mb-4">
-                      <img src={selectedAlert.userPhotoUrl} alt={selectedAlert.userName} className="w-16 h-16 rounded-full object-cover" />
-                      <div>
-                        <p className="font-semibold text-gray-900">{selectedAlert.userName}</p>
-                        <p className="text-gray-500">{selectedAlert.userPhone}</p>
+              <div className="bg-white rounded-xl p-4 shadow-sm">
+                {/* User & Date Info - Compact horizontal layout */}
+                <div className="flex flex-wrap gap-4 items-start">
+                  {/* User Info - Compact */}
+                  <div className="flex items-center gap-3 flex-1 min-w-[280px] bg-gray-50 rounded-lg p-3">
+                    <img src={selectedAlert.userPhotoUrl} alt={selectedAlert.userName} className="w-12 h-12 rounded-full object-cover ring-2 ring-[#6A1B9A]" />
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <p className="font-semibold text-gray-900 truncate">{selectedAlert.userName}</p>
                         {getStatusBadge(selectedAlert.status)}
                       </div>
+                      <p className="text-sm text-gray-500">{selectedAlert.userPhone || 'No phone'}</p>
                     </div>
                   </div>
 
-                  {/* Date Info */}
-                  <div>
-                    <h3 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
-                      <svg className="h-5 w-5 text-[#FF5722]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                      </svg>
-                      Date Information
-                    </h3>
-                    <div className="flex items-center gap-4 mb-4">
-                      <img src={selectedAlert.datePhotoUrl} alt={selectedAlert.dateName} className="w-16 h-16 rounded-full object-cover" />
-                      <div>
-                        <p className="font-semibold text-gray-900">{selectedAlert.dateName}</p>
-                        <p className="text-gray-500">{selectedAlert.datePhone}</p>
-                        <p className="text-sm text-gray-500 flex items-center gap-1">
-                          <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                          </svg>
-                          {selectedAlert.dateLocation}
-                        </p>
-                      </div>
+                  {/* Date Info - Compact */}
+                  <div className="flex items-center gap-3 flex-1 min-w-[280px] bg-orange-50 rounded-lg p-3">
+                    <img src={selectedAlert.datePhotoUrl} alt={selectedAlert.dateName} className="w-12 h-12 rounded-full object-cover ring-2 ring-[#FF5722]" />
+                    <div className="flex-1 min-w-0">
+                      <p className="font-semibold text-gray-900 truncate">{selectedAlert.dateName}</p>
+                      <p className="text-sm text-gray-500">{selectedAlert.datePhone}</p>
+                      <p className="text-xs text-gray-400 truncate">{selectedAlert.dateLocation}</p>
                     </div>
                   </div>
                 </div>
 
-                {/* Timeline */}
-                <div className="border-t pt-4 mt-4">
-                  <h3 className="font-semibold text-gray-900 mb-3">Timeline</h3>
-                  <div className="space-y-2 text-sm">
-                    <div className="flex items-center gap-3">
+                {/* Timeline - Compact horizontal */}
+                <div className="border-t pt-3 mt-3">
+                  <div className="flex flex-wrap items-center gap-4 text-sm mb-3">
+                    <div className="flex items-center gap-2 bg-gray-100 px-3 py-1.5 rounded-full">
                       <div className="w-2 h-2 rounded-full bg-green-500" />
-                      <span className="text-gray-600">Guardian activated at {formatTime(selectedAlert.activatedAt)}</span>
+                      <span className="text-gray-600">Started: {formatTime(selectedAlert.activatedAt)}</span>
                     </div>
-                    <div className="flex items-center gap-3">
-                      <div className="w-2 h-2 rounded-full bg-blue-500" />
-                      <span className="text-gray-600">Last check-in at {formatTime(selectedAlert.lastCheckIn)}</span>
-                    </div>
+                    {selectedAlert.status === 'active' && (
+                      <div className="flex items-center gap-2 bg-green-100 px-3 py-1.5 rounded-full">
+                        <div className="w-2 h-2 rounded-full bg-green-500" />
+                        <span className="text-green-700 font-medium">Safe at {formatTime(selectedAlert.lastCheckIn)}</span>
+                      </div>
+                    )}
                     {selectedAlert.status === 'no_response' && (
-                      <div className="flex items-center gap-3">
-                        <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
-                        <span className="text-red-600 font-medium">No response to check-in request</span>
+                      <div className="flex items-center gap-2 bg-orange-100 px-3 py-1.5 rounded-full animate-pulse">
+                        <div className="w-2 h-2 rounded-full bg-orange-500" />
+                        <span className="text-orange-700 font-medium">Waiting since {formatTime(selectedAlert.lastCheckIn)}</span>
                       </div>
                     )}
                     {selectedAlert.status === 'emergency' && (
-                      <div className="flex items-center gap-3">
-                        <div className="w-2 h-2 rounded-full bg-red-600 animate-pulse" />
-                        <span className="text-red-700 font-bold">EMERGENCY ALERT TRIGGERED</span>
+                      <div className="flex items-center gap-2 bg-red-100 px-3 py-1.5 rounded-full animate-pulse">
+                        <div className="w-2 h-2 rounded-full bg-red-600" />
+                        <span className="text-red-700 font-bold">EMERGENCY at {formatTime(selectedAlert.lastCheckIn)}</span>
+                      </div>
+                    )}
+                    {selectedAlert.status === 'safe' && (
+                      <div className="flex items-center gap-2 bg-blue-100 px-3 py-1.5 rounded-full">
+                        <div className="w-2 h-2 rounded-full bg-blue-500" />
+                        <span className="text-blue-700 font-medium">Ended at {formatTime(selectedAlert.lastCheckIn)}</span>
                       </div>
                     )}
                   </div>
                 </div>
 
+                {/* Emergency Contact Info - Collapsible Section */}
+                {showEmergencyContact && (
+                  <div className="border-t pt-3 mt-1 mb-3">
+                    <div className="bg-orange-50 border border-orange-200 rounded-lg p-4">
+                      <div className="flex items-center justify-between mb-3">
+                        <h4 className="font-semibold text-orange-800">Emergency Contact</h4>
+                        <button
+                          onClick={() => setShowEmergencyContact(false)}
+                          className="text-orange-600 hover:text-orange-800"
+                        >
+                          <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                          </svg>
+                        </button>
+                      </div>
+                      <div className="flex flex-wrap gap-6">
+                        <div>
+                          <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">Name</p>
+                          <p className="font-semibold text-gray-900">
+                            {selectedAlert.emergencyContactName || 'Not provided'}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">Phone</p>
+                          <p className="font-semibold text-gray-900">
+                            {selectedAlert.emergencyContactPhone || 'Not provided'}
+                          </p>
+                        </div>
+                        {selectedAlert.emergencyContactPhone && (
+                          <button
+                            onClick={() => handleCallUser(selectedAlert.emergencyContactPhone!)}
+                            className="flex items-center gap-2 bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+                          >
+                            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+                            </svg>
+                            Call Emergency Contact
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                )}
+
                 {/* Action Buttons */}
-                <div className="border-t pt-4 mt-4 flex flex-wrap gap-3">
+                <div className="border-t pt-3 mt-1 flex flex-wrap gap-2">
                   <button
                     onClick={() => handleCallUser(selectedAlert.userPhone)}
                     className="flex items-center gap-2 bg-[#6A1B9A] hover:bg-[#8B4DAE] text-white px-4 py-2 rounded-lg font-medium transition-colors"
@@ -475,6 +618,21 @@ export default function AdminDashboard() {
                     </svg>
                     Call User
                   </button>
+
+                  <button
+                    onClick={() => setShowEmergencyContact(!showEmergencyContact)}
+                    className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-colors ${
+                      showEmergencyContact
+                        ? 'bg-orange-100 text-orange-700 border border-orange-300'
+                        : 'bg-orange-500 hover:bg-orange-600 text-white'
+                    }`}
+                  >
+                    <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                    </svg>
+                    {showEmergencyContact ? 'Hide' : 'Emergency Contact'}
+                  </button>
+
                   <button
                     onClick={handleAlertAuthorities}
                     className="flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg font-medium transition-colors"
@@ -484,6 +642,7 @@ export default function AdminDashboard() {
                     </svg>
                     Alert Authorities
                   </button>
+
                   <button
                     onClick={() => handleMarkSafe(selectedAlert.id)}
                     className="flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-medium transition-colors"
@@ -507,6 +666,122 @@ export default function AdminDashboard() {
           </div>
         </div>
       </div>
+
+      {/* Modal: Alert Authorities */}
+      {showAlertAuthoritiesModal && selectedAlert && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-hidden">
+            {/* Header */}
+            <div className="bg-red-600 px-6 py-4 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <svg className="h-8 w-8 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+                <h2 className="text-xl font-bold text-white">Alert Authorities</h2>
+              </div>
+              <button
+                onClick={() => setShowAlertAuthoritiesModal(false)}
+                className="text-white/80 hover:text-white"
+              >
+                <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            {/* Content */}
+            <div className="p-6 overflow-y-auto max-h-[60vh]">
+              {/* Emergency Info Summary */}
+              <div className="grid grid-cols-2 gap-4 mb-6">
+                <div className="bg-purple-50 rounded-lg p-4">
+                  <p className="text-xs text-purple-600 font-semibold uppercase mb-1">User in Danger</p>
+                  <p className="font-bold text-gray-900">{selectedAlert.userName}</p>
+                  <p className="text-sm text-gray-600">{selectedAlert.userPhone}</p>
+                </div>
+                <div className="bg-orange-50 rounded-lg p-4">
+                  <p className="text-xs text-orange-600 font-semibold uppercase mb-1">Meeting With</p>
+                  <p className="font-bold text-gray-900">{selectedAlert.dateName}</p>
+                  <p className="text-sm text-gray-600">{selectedAlert.datePhone}</p>
+                </div>
+              </div>
+
+              <div className="bg-gray-50 rounded-lg p-4 mb-6">
+                <p className="text-xs text-gray-500 font-semibold uppercase mb-1">Location</p>
+                <p className="font-medium text-gray-900">{selectedAlert.dateLocation}</p>
+                {selectedAlert.currentLocation && (selectedAlert.currentLocation.latitude !== 0 || selectedAlert.currentLocation.longitude !== 0) && (
+                  <a
+                    href={`https://maps.google.com/?q=${selectedAlert.currentLocation.latitude},${selectedAlert.currentLocation.longitude}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-sm text-blue-600 hover:underline flex items-center gap-1 mt-1"
+                  >
+                    <svg className="h-4 w-4" fill="currentColor" viewBox="0 0 24 24">
+                      <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/>
+                    </svg>
+                    View on Google Maps
+                  </a>
+                )}
+              </div>
+
+              {/* Message Preview */}
+              <div className="mb-6">
+                <p className="text-sm font-semibold text-gray-700 mb-2">Message Preview:</p>
+                <div className="bg-gray-100 rounded-lg p-4 text-sm text-gray-700 whitespace-pre-wrap font-mono max-h-40 overflow-y-auto">
+                  {generateEmergencyMessage()}
+                </div>
+              </div>
+            </div>
+
+            {/* Actions */}
+            <div className="border-t bg-gray-50 px-6 py-4">
+              <div className="flex flex-wrap gap-3">
+                <button
+                  onClick={handleSendEmail}
+                  className="flex-1 flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-3 rounded-lg font-semibold transition-colors"
+                >
+                  <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                  </svg>
+                  Send Email
+                </button>
+
+                <button
+                  onClick={handleSendSMS}
+                  disabled={sendingAlert || !selectedAlert.emergencyContactPhone}
+                  className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-lg font-semibold transition-colors ${
+                    selectedAlert.emergencyContactPhone
+                      ? 'bg-green-600 hover:bg-green-700 text-white'
+                      : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                  }`}
+                >
+                  {sendingAlert ? (
+                    <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  ) : (
+                    <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                    </svg>
+                  )}
+                  {selectedAlert.emergencyContactPhone ? 'Send SMS to Emergency Contact' : 'No Emergency Contact'}
+                </button>
+
+                <button
+                  onClick={handleCopyMessage}
+                  className="flex items-center justify-center gap-2 bg-gray-600 hover:bg-gray-700 text-white px-4 py-3 rounded-lg font-semibold transition-colors"
+                >
+                  <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                  </svg>
+                  Copy
+                </button>
+              </div>
+
+              <p className="text-xs text-gray-500 text-center mt-3">
+                Call 911 directly for immediate emergency response
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
