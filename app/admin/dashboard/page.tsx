@@ -519,6 +519,7 @@ Please respond immediately.`;
                     <div className="flex-1 min-w-0">
                       <p className="text-xs text-purple-600 font-medium uppercase">Our User</p>
                       <p className="font-semibold text-gray-900 truncate">{selectedAlert.userNickname || selectedAlert.userName}</p>
+                      <p className="text-xs text-gray-400">@{selectedAlert.userName}</p>
                       <p className="text-sm text-gray-500">{selectedAlert.userPhone || 'No phone'}</p>
                     </div>
                   </div>
@@ -675,7 +676,7 @@ Please respond immediately.`;
 
       {/* Modal: Alert Authorities */}
       {showAlertAuthoritiesModal && selectedAlert && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[9999] p-4">
           <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-hidden">
             {/* Header */}
             <div className="bg-red-600 px-6 py-4 flex items-center justify-between">
