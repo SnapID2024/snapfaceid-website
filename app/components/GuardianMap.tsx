@@ -97,7 +97,7 @@ export default function GuardianMap({ selectedAlert, allAlerts, onAlertSelect, c
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<L.Map | null>(null);
   const markersRef = useRef<{marker: L.Marker, alert: Alert}[]>([]);
-  const lastCenteredAlertRef = useRef<string | null>(null);
+  const lastCenteredAlertRef = useRef<string | null>(null);  // 'initial' o ID de alerta
   const currentLayerRef = useRef<L.TileLayer | null>(null);
   const [mapReady, setMapReady] = useState(false);
   const [activeLayer, setActiveLayer] = useState<'google' | 'esri'>('google');
@@ -217,7 +217,10 @@ export default function GuardianMap({ selectedAlert, allAlerts, onAlertSelect, c
     return location.latitude !== 0 || location.longitude !== 0;
   };
 
-  // Update markers when alerts or zoom change
+  // Track last centerTrigger to detect explicit user clicks
+  const lastCenterTriggerRef = useRef<number>(0);
+
+  // Update markers when alerts change (without auto-centering)
   useEffect(() => {
     if (!mapInstanceRef.current || !mapReady) return;
 
@@ -274,27 +277,9 @@ export default function GuardianMap({ selectedAlert, allAlerts, onAlertSelect, c
       markersRef.current.push({marker, alert});
     });
 
-    // Default center (Miami, FL - where most users appear to be)
-    const defaultCenter: [number, number] = [25.7617, -80.1918];
-
-    // SIEMPRE centrar el mapa cuando hay una alerta seleccionada con coordenadas válidas
-    // Esto permite que al hacer clic en una alerta (incluso la misma), el mapa vuelva a centrar
-    if (selectedAlert && hasValidCoordinates(selectedAlert.currentLocation)) {
-      // Centrar en la ubicación del usuario seleccionado
-      mapInstanceRef.current.setView(
-        [selectedAlert.currentLocation.latitude, selectedAlert.currentLocation.longitude],
-        17, // Zoom 17 para ver edificios con detalle
-        { animate: true }
-      );
-      lastCenteredAlertRef.current = selectedAlert.id;
-
-      // Open the popup for selected alert
-      const selectedMarkerData = markersRef.current.find(({alert}) => alert.id === selectedAlert.id);
-      if (selectedMarkerData) {
-        selectedMarkerData.marker.openPopup();
-      }
-    } else if (!selectedAlert && lastCenteredAlertRef.current === null) {
-      // No hay selección y nunca hemos centrado - mostrar vista general
+    // Solo mostrar vista general la PRIMERA vez que carga (sin alertas previas)
+    if (lastCenteredAlertRef.current === null && !selectedAlert) {
+      const defaultCenter: [number, number] = [25.7617, -80.1918];
       if (alertsWithCoords.length > 0) {
         const bounds = L.latLngBounds(
           alertsWithCoords.map(a => [a.currentLocation.latitude, a.currentLocation.longitude])
@@ -305,9 +290,36 @@ export default function GuardianMap({ selectedAlert, allAlerts, onAlertSelect, c
       } else {
         mapInstanceRef.current.setView(defaultCenter, 12, { animate: true });
       }
+      lastCenteredAlertRef.current = 'initial';
     }
 
-  }, [selectedAlert, allAlerts, mapReady, onAlertSelect, centerTrigger]);
+  }, [selectedAlert, allAlerts, mapReady, onAlertSelect, currentZoom]);
+
+  // SOLO centrar cuando el usuario hace clic en una alerta (centerTrigger cambia)
+  useEffect(() => {
+    if (!mapInstanceRef.current || !mapReady) return;
+
+    // Verificar si centerTrigger realmente cambió (clic del usuario)
+    if (centerTrigger && centerTrigger !== lastCenterTriggerRef.current) {
+      lastCenterTriggerRef.current = centerTrigger;
+
+      if (selectedAlert && hasValidCoordinates(selectedAlert.currentLocation)) {
+        // Centrar en la ubicación del usuario seleccionado
+        mapInstanceRef.current.setView(
+          [selectedAlert.currentLocation.latitude, selectedAlert.currentLocation.longitude],
+          17, // Zoom 17 para ver edificios con detalle
+          { animate: true }
+        );
+        lastCenteredAlertRef.current = selectedAlert.id;
+
+        // Open the popup for selected alert
+        const selectedMarkerData = markersRef.current.find(({alert}) => alert.id === selectedAlert.id);
+        if (selectedMarkerData) {
+          selectedMarkerData.marker.openPopup();
+        }
+      }
+    }
+  }, [centerTrigger, selectedAlert, mapReady]);
 
   // Update marker icons when zoom changes (without recreating markers or changing view)
   useEffect(() => {

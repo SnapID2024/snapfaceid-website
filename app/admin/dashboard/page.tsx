@@ -23,12 +23,15 @@ interface Alert {
   id: string;
   userId: string;
   userName: string;
+  userNickname?: string;  // Apodo como lo conoce el contacto de emergencia
   userPhone: string;
   userPhotoUrl: string;
   datePhotoUrl: string;
   dateName: string;
   datePhone: string;
-  dateLocation: string;
+  locationType?: string;  // Tipo de ubicación (Restaurant, Bar, etc.)
+  dateAddress?: string;   // Dirección completa
+  dateLocation: string;   // Combinado para compatibilidad
   activatedAt: string;
   lastCheckIn: string;
   status: 'active' | 'no_response' | 'safe' | 'emergency';
@@ -461,20 +464,24 @@ Please respond immediately.`;
                         : 'border-[#6A1B9A]/30 bg-white'
                     }`}
                   >
-                    {/* Línea 1: Status + Nombre + Teléfono + Tiempo */}
+                    {/* Línea 1: UserName with DateName (Our User Date) + tiempo */}
                     <div className="flex items-center gap-1.5 text-xs">
                       <span className={`w-2 h-2 rounded-full flex-shrink-0 ${statusDisplay.color}`} />
-                      <span className="font-semibold text-gray-900 truncate">{alert.userName}</span>
-                      <span className="text-gray-400">•</span>
-                      <span className="text-gray-500 truncate">{alert.userPhone || 'No phone'}</span>
-                      <span className="text-gray-400 ml-auto flex-shrink-0">•</span>
-                      <span className="text-gray-400 flex-shrink-0">{getTimeSince(alert.lastCheckIn)}</span>
+                      <span className="font-semibold text-gray-900 truncate">
+                        {alert.userName} <span className="font-normal text-gray-600">with</span> {alert.dateName}
+                      </span>
+                      <span className="text-purple-600 font-medium flex-shrink-0">(Our User Date)</span>
+                      <span className="text-gray-400 ml-auto flex-shrink-0">{getTimeSince(alert.lastCheckIn)}</span>
                     </div>
-                    {/* Línea 2: Date / Ubicación */}
-                    <div className="flex items-center gap-1 text-xs text-gray-500 mt-0.5 pl-3.5">
-                      <span className="truncate">{alert.dateName}</span>
-                      <span className="text-gray-300">/</span>
-                      <span className="truncate flex-1">{alert.dateLocation}</span>
+                    {/* Línea 2: @ LocationType: - Address + Badge */}
+                    <div className="flex items-center gap-1.5 text-xs mt-0.5 pl-3.5">
+                      <span className="text-gray-500 truncate flex-1">
+                        @ {alert.locationType || 'Location'}: {alert.dateAddress || alert.dateLocation}
+                      </span>
+                      {/* Status Badge */}
+                      <span className={`px-1.5 py-0.5 rounded text-[10px] font-semibold flex-shrink-0 ${statusDisplay.bgLight} ${statusDisplay.textColor}`}>
+                        {statusDisplay.text}
+                      </span>
                       {alert.currentLocation && (alert.currentLocation.latitude !== 0 || alert.currentLocation.longitude !== 0) && (
                         <svg className="h-3 w-3 text-green-500 flex-shrink-0" fill="currentColor" viewBox="0 0 24 24">
                           <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/>
@@ -506,25 +513,24 @@ Please respond immediately.`;
               <div className="bg-white rounded-xl p-4 shadow-sm">
                 {/* User & Date Info - Compact horizontal layout */}
                 <div className="flex flex-wrap gap-4 items-start">
-                  {/* User Info - Compact */}
-                  <div className="flex items-center gap-3 flex-1 min-w-[280px] bg-gray-50 rounded-lg p-3">
-                    <img src={selectedAlert.userPhotoUrl} alt={selectedAlert.userName} className="w-12 h-12 rounded-full object-cover ring-2 ring-[#6A1B9A]" />
+                  {/* User Info - Compact (Our User) */}
+                  <div className="flex items-center gap-3 flex-1 min-w-[280px] bg-purple-50 rounded-lg p-3">
+                    <img src={selectedAlert.userPhotoUrl} alt={selectedAlert.userNickname || selectedAlert.userName} className="w-14 h-14 rounded-full object-cover ring-2 ring-[#6A1B9A]" />
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2">
-                        <p className="font-semibold text-gray-900 truncate">{selectedAlert.userName}</p>
-                        {getStatusBadge(selectedAlert.status)}
-                      </div>
+                      <p className="text-xs text-purple-600 font-medium uppercase">Our User</p>
+                      <p className="font-semibold text-gray-900 truncate">{selectedAlert.userNickname || selectedAlert.userName}</p>
                       <p className="text-sm text-gray-500">{selectedAlert.userPhone || 'No phone'}</p>
                     </div>
                   </div>
 
                   {/* Date Info - Compact */}
                   <div className="flex items-center gap-3 flex-1 min-w-[280px] bg-orange-50 rounded-lg p-3">
-                    <img src={selectedAlert.datePhotoUrl} alt={selectedAlert.dateName} className="w-12 h-12 rounded-full object-cover ring-2 ring-[#FF5722]" />
+                    <img src={selectedAlert.datePhotoUrl} alt={selectedAlert.dateName} className="w-14 h-14 rounded-full object-cover ring-2 ring-[#FF5722]" />
                     <div className="flex-1 min-w-0">
+                      <p className="text-xs text-orange-600 font-medium uppercase">Date With</p>
                       <p className="font-semibold text-gray-900 truncate">{selectedAlert.dateName}</p>
                       <p className="text-sm text-gray-500">{selectedAlert.datePhone}</p>
-                      <p className="text-xs text-gray-400 truncate">{selectedAlert.dateLocation}</p>
+                      <p className="text-xs text-gray-400 truncate">@ {selectedAlert.locationType}: {selectedAlert.dateAddress || selectedAlert.dateLocation}</p>
                     </div>
                   </div>
                 </div>
