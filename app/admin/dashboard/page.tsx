@@ -519,7 +519,6 @@ Please respond immediately.`;
                     <div className="flex-1 min-w-0">
                       <p className="text-xs text-purple-600 font-medium uppercase">Our User</p>
                       <p className="font-semibold text-gray-900 truncate">{selectedAlert.userNickname || selectedAlert.userName}</p>
-                      <p className="text-xs text-gray-400">@{selectedAlert.userName}</p>
                       <p className="text-sm text-gray-500">{selectedAlert.userPhone || 'No phone'}</p>
                     </div>
                   </div>
