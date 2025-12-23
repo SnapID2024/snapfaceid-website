@@ -45,6 +45,29 @@ interface Alert {
   };
 }
 
+interface HistoryEntry {
+  id: string;
+  userId: string;
+  userName: string;
+  userNickname: string;
+  userPhone: string;
+  userSelfieUrl: string;
+  dateName: string;
+  datePhone: string;
+  datePhotoUrl: string;
+  locationType: string;
+  address: string;
+  latitude: number;
+  longitude: number;
+  emergencyContactName: string;
+  emergencyContactPhone: string;
+  startedAt: string;
+  startedAtUnix: number;
+  endedAt: string;
+  endedAtUnix: number;
+  endStatus: 'safe' | 'emergency';
+}
+
 type FilterType = 'all' | 'active' | 'no_response' | 'emergency' | 'safe';
 
 // Función para obtener el color y texto del estado
@@ -75,6 +98,12 @@ export default function AdminDashboard() {
   const [showEmergencyContact, setShowEmergencyContact] = useState(false);
   const [showAlertAuthoritiesModal, setShowAlertAuthoritiesModal] = useState(false);
   const [sendingAlert, setSendingAlert] = useState(false);
+  const [showHistory, setShowHistory] = useState(false);
+  const [historyEntries, setHistoryEntries] = useState<HistoryEntry[]>([]);
+  const [historyLoading, setHistoryLoading] = useState(false);
+  const [recipientEmail, setRecipientEmail] = useState('');
+  const [sendingEmail, setSendingEmail] = useState(false);
+  const [smsRecipientPhone, setSmsRecipientPhone] = useState('');
 
   const fetchAlerts = useCallback(async () => {
     const token = localStorage.getItem('adminToken');
@@ -117,6 +146,38 @@ export default function AdminDashboard() {
       setError('Unable to fetch alerts. Backend may be offline.');
     } finally {
       setIsLoading(false);
+    }
+  }, [router]);
+
+  const fetchHistory = useCallback(async () => {
+    const token = localStorage.getItem('adminToken');
+    if (!token) {
+      router.push('/admin');
+      return;
+    }
+
+    setHistoryLoading(true);
+    try {
+      const response = await fetch('/api/admin/guardian-history', {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+
+      if (response.status === 401) {
+        localStorage.removeItem('adminToken');
+        router.push('/admin');
+        return;
+      }
+
+      const data = await response.json();
+      if (data.history) {
+        setHistoryEntries(data.history);
+      }
+    } catch (err) {
+      console.error('Error fetching history:', err);
+    } finally {
+      setHistoryLoading(false);
     }
   }, [router]);
 
@@ -202,6 +263,31 @@ export default function AdminDashboard() {
     return `${hours}h ${minutes % 60}m ago`;
   };
 
+  const formatDate = (isoString: string) => {
+    if (!isoString) return 'N/A';
+    const date = new Date(isoString);
+    return date.toLocaleDateString('en-US', {
+      month: '2-digit',
+      day: '2-digit',
+      year: 'numeric'
+    });
+  };
+
+  const formatHistoryTime = (isoString: string) => {
+    if (!isoString) return 'N/A';
+    const date = new Date(isoString);
+    return date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
+  };
+
+  const handleShowHistory = () => {
+    setShowHistory(true);
+    fetchHistory();
+  };
+
+  const handleBackToAlerts = () => {
+    setShowHistory(false);
+  };
+
   const filteredAlerts = alerts.filter((alert) => {
     if (filter === 'all') return true;
     return alert.status === filter;
@@ -233,7 +319,8 @@ export default function AdminDashboard() {
 
   const generateEmergencyMessage = () => {
     if (!selectedAlert) return '';
-    const { userName, userPhone, dateName, datePhone, dateLocation, currentLocation, emergencyContactName, emergencyContactPhone } = selectedAlert;
+    const { userName, userNickname, userPhone, dateName, datePhone, dateLocation, currentLocation, emergencyContactName, emergencyContactPhone } = selectedAlert;
+    const displayName = userNickname || userName;
     const locationUrl = currentLocation && (currentLocation.latitude !== 0 || currentLocation.longitude !== 0)
       ? `https://maps.google.com/?q=${currentLocation.latitude},${currentLocation.longitude}`
       : 'GPS not available';
@@ -241,7 +328,7 @@ export default function AdminDashboard() {
     return `🚨 EMERGENCY ALERT - SnapfaceID Guardian
 
 User in potential danger:
-• Name: ${userName}
+• Name: ${displayName}
 • Phone: ${userPhone}
 
 Meeting with:
@@ -263,9 +350,57 @@ Please respond immediately.`;
 
   const handleSendEmail = async () => {
     if (!selectedAlert) return;
-    const subject = encodeURIComponent(`EMERGENCY: ${selectedAlert.userName} needs help`);
-    const body = encodeURIComponent(generateEmergencyMessage());
-    window.open(`mailto:?subject=${subject}&body=${body}`, '_blank');
+    if (!recipientEmail || !recipientEmail.includes('@')) {
+      alert('Please enter a valid recipient email address');
+      return;
+    }
+
+    setSendingEmail(true);
+
+    try {
+      const token = localStorage.getItem('adminToken');
+      const response = await fetch('/api/admin/send-emergency-email', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          recipientEmail: recipientEmail,
+          alertId: selectedAlert.id,
+          userName: selectedAlert.userName,
+          userNickname: selectedAlert.userNickname || '',
+          userPhone: selectedAlert.userPhone,
+          userPhotoUrl: selectedAlert.userPhotoUrl || '',
+          dateName: selectedAlert.dateName,
+          datePhone: selectedAlert.datePhone,
+          datePhotoUrl: selectedAlert.datePhotoUrl || '',
+          dateLocation: selectedAlert.dateLocation,
+          locationType: selectedAlert.locationType || '',
+          dateAddress: selectedAlert.dateAddress || '',
+          latitude: selectedAlert.currentLocation?.latitude || 0,
+          longitude: selectedAlert.currentLocation?.longitude || 0,
+          emergencyContactName: selectedAlert.emergencyContactName || '',
+          emergencyContactPhone: selectedAlert.emergencyContactPhone || '',
+          activatedAt: selectedAlert.activatedAt,
+          lastCheckIn: selectedAlert.lastCheckIn,
+          status: selectedAlert.status,
+        }),
+      });
+
+      if (response.ok) {
+        alert(`Emergency email sent successfully to ${recipientEmail}!`);
+        setRecipientEmail('');
+      } else {
+        const data = await response.json();
+        alert(`Failed to send email: ${data.error || 'Unknown error'}`);
+      }
+    } catch (err) {
+      console.error('Error sending email:', err);
+      alert('Failed to send email. Please try again.');
+    } finally {
+      setSendingEmail(false);
+    }
   };
 
   const handleSendSMS = async () => {
@@ -303,6 +438,163 @@ Please respond immediately.`;
   const handleCopyMessage = () => {
     navigator.clipboard.writeText(generateEmergencyMessage());
     alert('Message copied to clipboard!');
+  };
+
+  const [sendingiMessage, setSendingiMessage] = useState(false);
+  const [sendingSuspectWarning, setSendingSuspectWarning] = useState(false);
+  const [suspectWarningPhone, setSuspectWarningPhone] = useState('');
+
+  const handleSendViaiMessage = async () => {
+    if (!selectedAlert) return;
+    if (!smsRecipientPhone) {
+      alert('Please enter a recipient phone number');
+      return;
+    }
+
+    const { userName, userNickname, userPhone, userPhotoUrl, dateName, datePhone, datePhotoUrl, dateLocation, locationType, dateAddress, currentLocation, emergencyContactName, emergencyContactPhone, activatedAt, lastCheckIn, status } = selectedAlert;
+    const displayName = userNickname || userName;
+
+    const mapsLink = currentLocation && (currentLocation.latitude !== 0 || currentLocation.longitude !== 0)
+      ? `https://maps.google.com/?q=${currentLocation.latitude},${currentLocation.longitude}`
+      : '';
+
+    const statusText = status === 'emergency' ? 'EMERGENCY' : status === 'no_response' ? 'NO RESPONSE' : status.toUpperCase();
+
+    // Plantilla profesional para iMessage
+    const message = `━━━━━━━━━━━━━━━━━━━━
+🚨 ALERTA DE EMERGENCIA
+━━━━━━━━━━━━━━━━━━━━
+Estado: ${statusText}
+
+👤 USUARIO EN PELIGRO
+${displayName}
+Tel: ${userPhone}
+
+👥 EN CITA CON
+${dateName}
+Tel: ${datePhone}
+
+📍 UBICACIÓN
+${locationType || 'Lugar'}: ${dateAddress || dateLocation}
+${mapsLink ? `Maps: ${mapsLink}` : ''}
+
+⏰ Último check-in: ${new Date(lastCheckIn).toLocaleTimeString()}
+
+📞 Contacto de Emergencia
+${emergencyContactName || 'N/A'}: ${emergencyContactPhone || 'N/A'}
+━━━━━━━━━━━━━━━━━━━━
+SnapfaceID Guardian`;
+
+    // Limpiar el número de teléfono (solo dígitos y +)
+    const cleanPhone = smsRecipientPhone.replace(/[^\d+]/g, '');
+
+    setSendingiMessage(true);
+
+    try {
+      // Intentar enviar via servidor local (genera imagen con todo integrado)
+      const response = await fetch('http://localhost:3847/send-imessage', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          phone: cleanPhone,
+          userPhotoUrl: userPhotoUrl || '',
+          datePhotoUrl: datePhotoUrl || '',
+          messageData: {
+            status: statusText,
+            userName: displayName,
+            userPhone: userPhone,
+            dateName: dateName,
+            datePhone: datePhone,
+            locationType: locationType || 'Location',
+            address: dateAddress || dateLocation,
+            dateLocation: dateLocation,
+            mapsLink: mapsLink,
+            lastCheckIn: new Date(lastCheckIn).toLocaleTimeString(),
+            emergencyContactName: emergencyContactName || 'N/A',
+            emergencyContactPhone: emergencyContactPhone || 'N/A',
+          },
+        }),
+      });
+
+      if (response.ok) {
+        alert('iMessage enviado exitosamente con fotos!');
+      } else {
+        const data = await response.json();
+        throw new Error(data.error || 'Error del servidor');
+      }
+    } catch (error) {
+      console.log('Servidor local no disponible, usando sms: URL scheme');
+      // Fallback: abrir app de Mensajes via sms: URL scheme (sin fotos)
+      const fullMessage = message + `\n\n📷 Photos:\n${userPhotoUrl || 'N/A'}\n${datePhotoUrl || 'N/A'}`;
+      const smsUrl = `sms:${cleanPhone}&body=${encodeURIComponent(fullMessage)}`;
+      window.open(smsUrl, '_self');
+    } finally {
+      setSendingiMessage(false);
+    }
+  };
+
+  const handleSendSuspectWarning = async () => {
+    if (!selectedAlert) return;
+
+    // Usar el teléfono ingresado manualmente
+    if (!suspectWarningPhone) {
+      alert('Please enter a phone number for the warning');
+      return;
+    }
+
+    const { userName, userNickname, userPhone, userPhotoUrl, dateName, datePhone: dPhone, datePhotoUrl, dateLocation, locationType, dateAddress, currentLocation, emergencyContactName, emergencyContactPhone, lastCheckIn, status } = selectedAlert;
+    const displayName = userNickname || userName;
+
+    const mapsLink = currentLocation && (currentLocation.latitude !== 0 || currentLocation.longitude !== 0)
+      ? `https://maps.google.com/?q=${currentLocation.latitude},${currentLocation.longitude}`
+      : '';
+
+    const statusText = status === 'emergency' ? 'EMERGENCY' : status === 'no_response' ? 'NO RESPONSE' : status.toUpperCase();
+
+    // Limpiar el número de teléfono ingresado
+    const cleanPhone = suspectWarningPhone.replace(/[^\d+]/g, '');
+
+    setSendingSuspectWarning(true);
+
+    try {
+      const response = await fetch('http://localhost:3847/send-imessage', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          phone: cleanPhone,
+          template: 'suspect',  // Usar plantilla de sospechoso
+          userPhotoUrl: userPhotoUrl || '',
+          datePhotoUrl: datePhotoUrl || '',
+          messageData: {
+            status: statusText,
+            userName: displayName,
+            userPhone: userPhone,
+            dateName: dateName,
+            datePhone: dPhone,
+            locationType: locationType || 'Location',
+            address: dateAddress || dateLocation,
+            dateLocation: dateLocation,
+            mapsLink: mapsLink,
+            lastCheckIn: new Date(lastCheckIn).toLocaleTimeString(),
+            emergencyContactName: emergencyContactName || 'N/A',
+            emergencyContactPhone: emergencyContactPhone || 'N/A',
+          },
+        }),
+      });
+
+      if (response.ok) {
+        alert(`Warning sent successfully to ${suspectWarningPhone}!`);
+        setSuspectWarningPhone('');
+      } else {
+        const data = await response.json();
+        throw new Error(data.error || 'Server error');
+      }
+    } catch (error) {
+      console.error('Error sending suspect warning:', error);
+      alert('Failed to send warning. Make sure the local server is running.');
+    } finally {
+      setSendingSuspectWarning(false);
+    }
   };
 
   const handleMarkSafe = async (alertId: string) => {
@@ -382,24 +674,153 @@ Please respond immediately.`;
               return (
                 <button
                   key={f}
-                  onClick={() => setFilter(f)}
+                  onClick={() => { setFilter(f); setShowHistory(false); }}
                   className={`px-4 py-2 rounded-lg font-medium text-sm whitespace-nowrap transition-all ${
-                    filter === f ? 'bg-[#6A1B9A] text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                    filter === f && !showHistory ? 'bg-[#6A1B9A] text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                   }`}
                 >
                   {displayName}
-                  <span className={`ml-2 px-2 py-0.5 rounded-full text-xs ${filter === f ? 'bg-white/20' : 'bg-gray-200'}`}>
+                  <span className={`ml-2 px-2 py-0.5 rounded-full text-xs ${filter === f && !showHistory ? 'bg-white/20' : 'bg-gray-200'}`}>
                     {alertCounts[f]}
                   </span>
                 </button>
               );
             })}
+            {/* Separator */}
+            <div className="w-px h-8 bg-gray-300 mx-2" />
+            {/* History Tab */}
+            <button
+              onClick={handleShowHistory}
+              className={`px-4 py-2 rounded-lg font-medium text-sm whitespace-nowrap transition-all flex items-center gap-2 ${
+                showHistory ? 'bg-[#6A1B9A] text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+              }`}
+            >
+              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              History
+              <span className={`px-2 py-0.5 rounded-full text-xs ${showHistory ? 'bg-white/20' : 'bg-gray-200'}`}>
+                90d
+              </span>
+            </button>
           </div>
         </div>
       </div>
 
       {/* Main Content */}
       <div className="max-w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        {showHistory ? (
+          /* History View */
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={handleBackToAlerts}
+                  className="flex items-center gap-2 text-gray-600 hover:text-gray-900 transition-colors"
+                >
+                  <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                  </svg>
+                </button>
+                <h2 className="font-semibold text-gray-900 text-lg">Guardian History (Last 90 Days)</h2>
+              </div>
+              <span className="text-sm text-gray-500">
+                {historyEntries.length} entries
+              </span>
+            </div>
+
+            {/* History Loading State */}
+            {historyLoading && (
+              <div className="bg-white rounded-xl p-8 shadow-sm text-center">
+                <div className="w-8 h-8 border-4 border-[#6A1B9A] border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+                <p className="text-gray-500">Loading history...</p>
+              </div>
+            )}
+
+            {/* History Empty State */}
+            {!historyLoading && historyEntries.length === 0 && (
+              <div className="bg-white rounded-xl p-8 shadow-sm text-center">
+                <svg className="h-12 w-12 text-gray-300 mx-auto mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <h3 className="font-semibold text-gray-900 mb-1">No History Available</h3>
+                <p className="text-gray-500 text-sm">
+                  Guardian session history will appear here after sessions are completed.
+                </p>
+              </div>
+            )}
+
+            {/* History List */}
+            {!historyLoading && historyEntries.length > 0 && (
+              <div className="space-y-3">
+                {historyEntries.map((entry) => (
+                  <div
+                    key={entry.id}
+                    className={`bg-white rounded-xl p-4 shadow-sm border-l-4 ${
+                      entry.endStatus === 'emergency' ? 'border-red-500' : 'border-blue-500'
+                    }`}
+                  >
+                    {/* Date Header */}
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="flex items-center gap-2">
+                        <span className="font-semibold text-gray-900">Day: {formatDate(entry.endedAt)}</span>
+                        <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${
+                          entry.endStatus === 'emergency'
+                            ? 'bg-red-100 text-red-700'
+                            : 'bg-blue-100 text-blue-700'
+                        }`}>
+                          {entry.endStatus === 'emergency' ? 'EMERGENCY' : 'Safe'}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Location */}
+                    <div className="text-sm text-gray-600 mb-3">
+                      <span className="font-medium">Location:</span> {entry.locationType}{entry.address ? `: ${entry.address}` : ''}
+                    </div>
+
+                    {/* User and Date Info with Photos */}
+                    <div className="flex items-center gap-4 mb-3">
+                      {/* User */}
+                      <div className="flex items-center gap-2">
+                        <img
+                          src={entry.userSelfieUrl || '/placeholder-user.png'}
+                          alt={entry.userNickname}
+                          className="w-10 h-10 rounded-full object-cover ring-2 ring-purple-500"
+                          onError={(e) => { (e.target as HTMLImageElement).src = '/placeholder-user.png'; }}
+                        />
+                        <span className="font-medium text-gray-900">{entry.userNickname || entry.userName}</span>
+                      </div>
+
+                      <span className="text-gray-400">was on a date with</span>
+
+                      {/* Date Person */}
+                      <div className="flex items-center gap-2">
+                        <img
+                          src={entry.datePhotoUrl || '/placeholder-user.png'}
+                          alt={entry.dateName}
+                          className="w-10 h-10 rounded-full object-cover ring-2 ring-orange-500"
+                          onError={(e) => { (e.target as HTMLImageElement).src = '/placeholder-user.png'; }}
+                        />
+                        <span className="font-medium text-gray-900">{entry.dateName}</span>
+                      </div>
+                    </div>
+
+                    {/* Time Info */}
+                    <div className="flex items-center gap-4 text-sm text-gray-600">
+                      <div className="flex items-center gap-1">
+                        <span className="font-medium">Started:</span> {formatHistoryTime(entry.startedAt)}
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <span className="font-medium">Ended:</span> {formatHistoryTime(entry.endedAt)}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        ) : (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Alert List */}
           <div className="lg:col-span-1 space-y-4">
@@ -671,6 +1092,7 @@ Please respond immediately.`;
             )}
           </div>
         </div>
+        )}
       </div>
 
       {/* Modal: Alert Authorities */}
@@ -697,17 +1119,37 @@ Please respond immediately.`;
 
             {/* Content */}
             <div className="p-6 overflow-y-auto max-h-[60vh]">
-              {/* Emergency Info Summary */}
+              {/* Emergency Info Summary with Photos */}
               <div className="grid grid-cols-2 gap-4 mb-6">
                 <div className="bg-purple-50 rounded-lg p-4">
-                  <p className="text-xs text-purple-600 font-semibold uppercase mb-1">User in Danger</p>
-                  <p className="font-bold text-gray-900">{selectedAlert.userName}</p>
-                  <p className="text-sm text-gray-600">{selectedAlert.userPhone}</p>
+                  <p className="text-xs text-purple-600 font-semibold uppercase mb-2">User in Danger</p>
+                  <div className="flex items-center gap-3">
+                    <img
+                      src={selectedAlert.userPhotoUrl || '/placeholder-user.png'}
+                      alt={selectedAlert.userNickname || selectedAlert.userName}
+                      className="w-14 h-14 rounded-full object-cover ring-2 ring-purple-500"
+                      onError={(e) => { (e.target as HTMLImageElement).src = '/placeholder-user.png'; }}
+                    />
+                    <div>
+                      <p className="font-bold text-gray-900">{selectedAlert.userNickname || selectedAlert.userName}</p>
+                      <p className="text-sm text-gray-600">{selectedAlert.userPhone}</p>
+                    </div>
+                  </div>
                 </div>
                 <div className="bg-orange-50 rounded-lg p-4">
-                  <p className="text-xs text-orange-600 font-semibold uppercase mb-1">Meeting With</p>
-                  <p className="font-bold text-gray-900">{selectedAlert.dateName}</p>
-                  <p className="text-sm text-gray-600">{selectedAlert.datePhone}</p>
+                  <p className="text-xs text-orange-600 font-semibold uppercase mb-2">Meeting With</p>
+                  <div className="flex items-center gap-3">
+                    <img
+                      src={selectedAlert.datePhotoUrl || '/placeholder-user.png'}
+                      alt={selectedAlert.dateName}
+                      className="w-14 h-14 rounded-full object-cover ring-2 ring-orange-500"
+                      onError={(e) => { (e.target as HTMLImageElement).src = '/placeholder-user.png'; }}
+                    />
+                    <div>
+                      <p className="font-bold text-gray-900">{selectedAlert.dateName}</p>
+                      <p className="text-sm text-gray-600">{selectedAlert.datePhone}</p>
+                    </div>
+                  </div>
                 </div>
               </div>
 
@@ -740,44 +1182,137 @@ Please respond immediately.`;
 
             {/* Actions */}
             <div className="border-t bg-gray-50 px-6 py-4">
-              <div className="flex flex-wrap gap-3">
-                <button
-                  onClick={handleSendEmail}
-                  className="flex-1 flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-3 rounded-lg font-semibold transition-colors"
-                >
-                  <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                  </svg>
-                  Send Email
-                </button>
+              {/* Two columns: Email and iMessage/SMS */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                {/* Email Section */}
+                <div className="bg-blue-50 rounded-lg p-3">
+                  <label className="block text-sm font-semibold text-blue-700 mb-2">
+                    Send via Email (with photos)
+                  </label>
+                  <input
+                    type="email"
+                    value={recipientEmail}
+                    onChange={(e) => setRecipientEmail(e.target.value)}
+                    placeholder="recipient@email.com"
+                    className="w-full px-3 py-2 border border-blue-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm"
+                  />
+                  <button
+                    onClick={handleSendEmail}
+                    disabled={sendingEmail || !recipientEmail}
+                    className={`w-full mt-2 flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg font-semibold transition-colors ${
+                      sendingEmail || !recipientEmail
+                        ? 'bg-blue-400 cursor-not-allowed'
+                        : 'bg-blue-600 hover:bg-blue-700'
+                    } text-white text-sm`}
+                  >
+                    {sendingEmail ? (
+                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    ) : (
+                      <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                      </svg>
+                    )}
+                    {sendingEmail ? 'Sending...' : 'Send Email'}
+                  </button>
+                </div>
 
+                {/* iMessage/SMS Section */}
+                <div className="bg-green-50 rounded-lg p-3">
+                  <label className="block text-sm font-semibold text-green-700 mb-2">
+                    Send via iMessage/SMS (Mac)
+                  </label>
+                  <input
+                    type="tel"
+                    value={smsRecipientPhone}
+                    onChange={(e) => setSmsRecipientPhone(e.target.value)}
+                    placeholder="+1 (786) 555-1234"
+                    className="w-full px-3 py-2 border border-green-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none text-sm"
+                  />
+                  <button
+                    onClick={handleSendViaiMessage}
+                    disabled={!smsRecipientPhone || sendingiMessage}
+                    className={`w-full mt-2 flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg font-semibold transition-colors ${
+                      !smsRecipientPhone || sendingiMessage
+                        ? 'bg-green-400 cursor-not-allowed'
+                        : 'bg-green-600 hover:bg-green-700'
+                    } text-white text-sm`}
+                  >
+                    {sendingiMessage ? (
+                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    ) : (
+                      <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                      </svg>
+                    )}
+                    {sendingiMessage ? 'Sending...' : 'Send iMessage + Photos'}
+                  </button>
+                </div>
+              </div>
+
+              {/* Send Warning to Suspect/Date Section */}
+              <div className="bg-orange-100 rounded-lg p-3 mb-4 border-2 border-orange-400">
+                <label className="block text-sm font-bold text-orange-800 mb-2">
+                  Send Warning to Suspect/Date
+                </label>
+                <p className="text-xs text-orange-700 mb-2">
+                  Send a warning message informing that police are on their way. Date phone: {selectedAlert.datePhone || 'N/A'}
+                </p>
+                <input
+                  type="tel"
+                  value={suspectWarningPhone}
+                  onChange={(e) => setSuspectWarningPhone(e.target.value)}
+                  placeholder={selectedAlert.datePhone || "+1 (786) 555-1234"}
+                  className="w-full px-3 py-2 border border-orange-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none text-sm mb-2"
+                />
+                <button
+                  onClick={handleSendSuspectWarning}
+                  disabled={!suspectWarningPhone || sendingSuspectWarning}
+                  className={`w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg font-semibold transition-colors ${
+                    !suspectWarningPhone || sendingSuspectWarning
+                      ? 'bg-orange-400 cursor-not-allowed'
+                      : 'bg-orange-600 hover:bg-orange-700'
+                  } text-white text-sm`}
+                >
+                  {sendingSuspectWarning ? (
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  ) : (
+                    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                    </svg>
+                  )}
+                  {sendingSuspectWarning ? 'Sending...' : 'Send Warning'}
+                </button>
+              </div>
+
+              {/* Quick Actions Row */}
+              <div className="flex flex-wrap gap-2">
                 <button
                   onClick={handleSendSMS}
                   disabled={sendingAlert || !selectedAlert.emergencyContactPhone}
-                  className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-lg font-semibold transition-colors ${
+                  className={`flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-lg font-medium transition-colors text-sm ${
                     selectedAlert.emergencyContactPhone
-                      ? 'bg-green-600 hover:bg-green-700 text-white'
+                      ? 'bg-orange-500 hover:bg-orange-600 text-white'
                       : 'bg-gray-300 text-gray-500 cursor-not-allowed'
                   }`}
                 >
                   {sendingAlert ? (
-                    <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
                   ) : (
-                    <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" />
                     </svg>
                   )}
-                  {selectedAlert.emergencyContactPhone ? 'Send SMS to Emergency Contact' : 'No Emergency Contact'}
+                  Twilio SMS
                 </button>
 
                 <button
                   onClick={handleCopyMessage}
-                  className="flex items-center justify-center gap-2 bg-gray-600 hover:bg-gray-700 text-white px-4 py-3 rounded-lg font-semibold transition-colors"
+                  className="flex items-center justify-center gap-2 bg-gray-600 hover:bg-gray-700 text-white px-3 py-2 rounded-lg font-medium transition-colors text-sm"
                 >
-                  <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
                   </svg>
-                  Copy
+                  Copy Text
                 </button>
               </div>
 

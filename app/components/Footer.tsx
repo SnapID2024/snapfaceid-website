@@ -18,7 +18,7 @@ const Footer: React.FC<FooterProps> = ({ simplified = false }) => {
               <span className="font-bold">SnapfaceID</span>
             </div>
             <p className="text-gray-400 text-sm">
-              © 2025 SnapfaceID. All rights reserved.
+              © 2025 BELLACRUZ ONLINE LLC. All rights reserved.
             </p>
           </div>
         </div>
@@ -127,7 +127,7 @@ const Footer: React.FC<FooterProps> = ({ simplified = false }) => {
         <div className="border-t border-gray-700 mt-10 pt-8 flex flex-col md:flex-row items-center justify-between">
           <div className="flex items-center gap-4">
             <p className="text-gray-400 text-sm">
-              © 2025 SnapfaceID. All rights reserved.
+              © 2025 BELLACRUZ ONLINE LLC. All rights reserved.
             </p>
             <Link href="/admin" className="text-gray-600 hover:text-gray-400 transition-colors text-xs">
               Admin

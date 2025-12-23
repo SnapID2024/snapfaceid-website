@@ -5,7 +5,9 @@ import Footer from '../components/Footer';
 const TERMS_SECTIONS = [
   {
     title: '1. Acceptance of Terms',
-    body: `By registering and/or subscribing to our service, you accept the following terms and conditions in their entirety. Using this application implies your binding consent to these policies. If you do not agree with any term, you must not use this application.`,
+    body: `These Terms of Service are provided by BELLACRUZ ONLINE LLC.
+
+By registering and/or subscribing to our service, you accept the following terms and conditions in their entirety. Using this application implies your binding consent to these policies. If you do not agree with any term, you must not use this application.`,
   },
   {
     title: '2. Service Description',
@@ -259,6 +261,7 @@ WHEN UNINSTALLING THE APP:
     title: '16. Contact',
     body: `For questions, cancellations, or requests:
 
+BELLACRUZ ONLINE LLC
 Email: bellacruzcompany@gmail.com
 
 For requests from reviewed persons:

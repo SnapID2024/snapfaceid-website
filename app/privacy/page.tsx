@@ -18,6 +18,9 @@ export default function PrivacyPage() {
             <section className="bg-white rounded-2xl p-6 md:p-8 shadow-sm space-y-4">
               <h2 className="text-xl md:text-2xl font-bold text-gray-900">Overview</h2>
               <p className="text-gray-700 leading-relaxed">
+                <strong>This service is operated by BELLACRUZ ONLINE LLC.</strong>
+              </p>
+              <p className="text-gray-700 leading-relaxed">
                 SnapfaceID is a personal safety platform. This Privacy Policy explains what information we collect, how
                 we use it, and how we share it when you use our website, mobile application, and Guardian safety
                 features.
@@ -86,13 +89,37 @@ We may also share information if required by law, to protect user safety, or to 
             </section>
 
             <section className="bg-white rounded-2xl p-6 md:p-8 shadow-sm space-y-4">
+              <h2 className="text-xl md:text-2xl font-bold text-gray-900">SMS/MMS Consent and Communications</h2>
+              <p className="text-gray-700 leading-relaxed">
+                By providing your phone number and using our services, you consent to receive SMS and MMS messages from BELLACRUZ ONLINE LLC related to:
+              </p>
+              <ul className="text-gray-700 list-disc list-inside space-y-1">
+                <li>Account verification and security alerts</li>
+                <li>Guardian safety notifications and emergency alerts</li>
+                <li>Service notifications and updates</li>
+              </ul>
+              <p className="text-gray-700 leading-relaxed mt-3">
+                <strong>Message frequency varies.</strong> Message and data rates may apply.
+              </p>
+              <p className="text-gray-700 leading-relaxed">
+                Reply <strong>STOP</strong> to unsubscribe from non-essential messages. Reply <strong>HELP</strong> for assistance.
+              </p>
+              <p className="text-gray-700 leading-relaxed">
+                Note: You cannot opt out of Guardian emergency alerts while an active Guardian session is in progress, as these are critical safety communications.
+              </p>
+            </section>
+
+            <section className="bg-white rounded-2xl p-6 md:p-8 shadow-sm space-y-4">
               <h2 className="text-xl md:text-2xl font-bold text-gray-900">Contact</h2>
               <p className="text-gray-700 leading-relaxed">
                 For privacy questions or requests, contact us at{' '}
                 <a className="text-[#6A1B9A] hover:underline" href="mailto:bellacruzcompany@gmail.com">
                   bellacruzcompany@gmail.com
                 </a>
-                .
+              </p>
+              <p className="text-gray-700 leading-relaxed mt-4">
+                <strong>BELLACRUZ ONLINE LLC</strong><br />
+                Email: bellacruzcompany@gmail.com
               </p>
             </section>
           </div>
