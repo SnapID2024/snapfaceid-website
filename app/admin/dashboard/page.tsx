@@ -1094,9 +1094,11 @@ SnapfaceID Guardian`;
                           {alert.locationType || 'Location'}: {alert.dateAddress || alert.dateLocation}
                         </span>
                         {alert.currentLocation && (alert.currentLocation.latitude !== 0 || alert.currentLocation.longitude !== 0) && (
-                          <svg className="h-3 w-3 text-green-500 flex-shrink-0 ml-auto" fill="currentColor" viewBox="0 0 24 24" title="GPS Available">
-                            <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/>
-                          </svg>
+                          <span title="GPS Available">
+                            <svg className="h-3 w-3 text-green-500 flex-shrink-0 ml-auto" fill="currentColor" viewBox="0 0 24 24">
+                              <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/>
+                            </svg>
+                          </span>
                         )}
                       </div>
 
