@@ -95,6 +95,7 @@ const getStatusDisplay = (status: Alert['status']) => {
 };
 
 // Función para obtener el indicador de estado del dispositivo (batería/señal)
+// NOTA: Solo Emergency debe ser rojo - todos los estados de dispositivo son grises
 const getDeviceStatusDisplay = (alert: Alert) => {
   if (!alert.deviceOffline) {
     // Device online - show battery/network info if available
@@ -103,9 +104,9 @@ const getDeviceStatusDisplay = (alert: Alert) => {
         show: true,
         icon: 'battery_low',
         text: `${alert.batteryLevel}%`,
-        bgColor: 'bg-yellow-500',
-        textColor: 'text-yellow-900',
-        bgLight: 'bg-yellow-100',
+        bgColor: 'bg-gray-600',  // Gris medio para advertencia de batería
+        textColor: 'text-white',
+        bgLight: 'bg-gray-200',
         description: 'Low battery warning',
         animate: true,
       };
@@ -113,16 +114,16 @@ const getDeviceStatusDisplay = (alert: Alert) => {
     return null; // No special indicator needed
   }
 
-  // Device is offline - show reason
+  // Device is offline - show reason (todos en tonos de gris)
   switch (alert.offlineReason) {
     case 'battery_dead':
       return {
         show: true,
         icon: 'battery_dead',
         text: 'BATTERY DEAD',
-        bgColor: 'bg-red-800',
+        bgColor: 'bg-gray-900',  // Gris más oscuro - situación más crítica
         textColor: 'text-white',
-        bgLight: 'bg-red-200',
+        bgLight: 'bg-gray-300',
         description: 'Device battery is dead (0%)',
         animate: true,
       };
@@ -131,9 +132,9 @@ const getDeviceStatusDisplay = (alert: Alert) => {
         show: true,
         icon: 'battery_critical',
         text: `BATTERY ${alert.batteryLevel || '< 15'}%`,
-        bgColor: 'bg-red-600',
+        bgColor: 'bg-gray-800',  // Gris oscuro
         textColor: 'text-white',
-        bgLight: 'bg-red-100',
+        bgLight: 'bg-gray-200',
         description: 'Device battery critically low',
         animate: true,
       };
@@ -142,7 +143,7 @@ const getDeviceStatusDisplay = (alert: Alert) => {
         show: true,
         icon: 'no_signal',
         text: 'NO SIGNAL',
-        bgColor: 'bg-gray-800',
+        bgColor: 'bg-gray-700',  // Gris medio-oscuro
         textColor: 'text-white',
         bgLight: 'bg-gray-200',
         description: 'Device has no network signal',
@@ -154,7 +155,7 @@ const getDeviceStatusDisplay = (alert: Alert) => {
         show: true,
         icon: 'offline',
         text: 'OFFLINE',
-        bgColor: 'bg-gray-700',
+        bgColor: 'bg-gray-600',  // Gris medio
         textColor: 'text-white',
         bgLight: 'bg-gray-200',
         description: 'App closed or signal lost',
@@ -222,6 +223,9 @@ export default function AdminDashboard() {
   const [recipientEmail, setRecipientEmail] = useState('');
   const [sendingEmail, setSendingEmail] = useState(false);
   const [smsRecipientPhone, setSmsRecipientPhone] = useState('');
+
+  // Derived state: check if any device is offline (for faster polling)
+  const hasOfflineDevices = alerts.some(a => a.deviceOffline);
 
   const fetchAlerts = useCallback(async () => {
     const token = localStorage.getItem('adminToken');
@@ -310,14 +314,23 @@ export default function AdminDashboard() {
     // Fetch alerts immediately
     fetchAlerts();
 
-    // Smart polling: faster when there are alerts, slower when empty
+    // Smart polling with offline device detection
     let intervalId: NodeJS.Timeout;
 
     const setupPolling = () => {
-      // If there are any alerts (including safe), poll every 15 seconds
-      // If no alerts, poll every 60 seconds to save resources
-      const hasAlerts = alerts.length > 0;
-      const pollInterval = hasAlerts ? 15000 : 60000;
+      // Polling intervals:
+      // - 10 seconds: when there are offline devices (to detect reconnection quickly)
+      // - 15 seconds: when there are active alerts but no offline devices
+      // - 60 seconds: when no alerts (save resources)
+      let pollInterval: number;
+      if (hasOfflineDevices) {
+        pollInterval = 10000; // 10 seconds for offline device recovery detection
+        console.log('🔄 Polling every 10s - Offline device detected');
+      } else if (alerts.length > 0) {
+        pollInterval = 15000; // 15 seconds for active alerts
+      } else {
+        pollInterval = 60000; // 60 seconds when idle
+      }
 
       if (intervalId) clearInterval(intervalId);
       intervalId = setInterval(fetchAlerts, pollInterval);
@@ -344,7 +357,7 @@ export default function AdminDashboard() {
       if (intervalId) clearInterval(intervalId);
       document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
-  }, [router, fetchAlerts, alerts.length]);
+  }, [router, fetchAlerts, alerts.length, hasOfflineDevices]);
 
   const handleLogout = () => {
     localStorage.removeItem('adminToken');
@@ -1096,12 +1109,14 @@ SnapfaceID Guardian`;
                   if (!deviceStatus) return null;
 
                   // Define banner styles based on offline reason
+                  // NOTA: Todos los banners de estado de dispositivo son GRISES
+                  // Solo Emergency debe ser rojo para evitar confusión visual
                   const getBannerStyles = () => {
                     switch (selectedAlert.offlineReason) {
                       case 'battery_dead':
                         return {
-                          bg: 'bg-red-900',
-                          iconBg: 'bg-red-600',
+                          bg: 'bg-gray-900',  // Gris más oscuro - situación más crítica
+                          iconBg: 'bg-gray-700',
                           title: 'BATTERY DEAD',
                           description: 'User device battery is completely drained.',
                           icon: (
@@ -1113,8 +1128,8 @@ SnapfaceID Guardian`;
                         };
                       case 'battery_critical':
                         return {
-                          bg: 'bg-red-800',
-                          iconBg: 'bg-red-500',
+                          bg: 'bg-gray-800',  // Gris oscuro
+                          iconBg: 'bg-gray-600',
                           title: 'BATTERY CRITICAL',
                           description: `User device battery critically low (${selectedAlert.batteryLevel || '< 15'}%).`,
                           icon: (
@@ -1126,8 +1141,8 @@ SnapfaceID Guardian`;
                         };
                       case 'no_signal':
                         return {
-                          bg: 'bg-gray-800',
-                          iconBg: 'bg-gray-600',
+                          bg: 'bg-gray-700',  // Gris medio-oscuro
+                          iconBg: 'bg-gray-500',
                           title: 'NO SIGNAL',
                           description: 'User device has lost network signal (WiFi and cellular unavailable).',
                           icon: (
@@ -1139,8 +1154,8 @@ SnapfaceID Guardian`;
                       case 'app_closed_or_signal_lost':
                       default:
                         return {
-                          bg: 'bg-gray-900',
-                          iconBg: 'bg-gray-600',
+                          bg: 'bg-gray-600',  // Gris medio
+                          iconBg: 'bg-gray-400',
                           title: 'DEVICE OFFLINE',
                           description: 'User device lost connection (app may be closed or signal lost).',
                           icon: (
