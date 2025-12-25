@@ -1003,57 +1003,114 @@ SnapfaceID Guardian`;
               </div>
             )}
 
-            <div className="space-y-1.5 max-h-[calc(100vh-300px)] overflow-y-auto pr-1">
+            <div className="space-y-2 max-h-[calc(100vh-300px)] overflow-y-auto pr-1">
               {!isLoading && filteredAlerts.map((alert) => {
                 const statusDisplay = getStatusDisplay(alert.status);
+                const deviceStatus = getDeviceStatusDisplay(alert);
+
+                // Colores de banner según estado de sesión
+                const getSessionBannerStyle = () => {
+                  switch (alert.status) {
+                    case 'emergency':
+                      return {
+                        bg: 'bg-red-600',
+                        text: 'EMERGENCY',
+                        icon: (
+                          <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                          </svg>
+                        ),
+                      };
+                    case 'safe':
+                      return {
+                        bg: 'bg-blue-500',
+                        text: 'SAFE',
+                        icon: (
+                          <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                          </svg>
+                        ),
+                      };
+                    case 'no_response':
+                      return {
+                        bg: 'bg-orange-500',
+                        text: 'NO RESPONSE',
+                        icon: (
+                          <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                          </svg>
+                        ),
+                      };
+                    case 'active':
+                    default:
+                      return {
+                        bg: 'bg-green-500',
+                        text: 'ACTIVE',
+                        icon: (
+                          <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                          </svg>
+                        ),
+                      };
+                  }
+                };
+
+                const sessionBanner = getSessionBannerStyle();
+
                 return (
                   <div
                     key={alert.id}
                     onClick={() => handleSelectAlert(alert)}
-                    className={`rounded border cursor-pointer transition-all hover:bg-purple-50 px-2 py-1.5 ${
+                    className={`rounded-lg overflow-hidden border cursor-pointer transition-all hover:shadow-md ${
                       selectedAlert?.id === alert.id
-                        ? 'border-[#6A1B9A] bg-purple-50 border-2'
-                        : 'border-[#6A1B9A]/30 bg-white'
+                        ? 'border-[#6A1B9A] ring-2 ring-[#6A1B9A]/30'
+                        : 'border-gray-200 bg-white'
                     }`}
                   >
-                    {/* Línea 1: UserName with DateName (Our User Date) + tiempo */}
-                    <div className="flex items-center gap-1.5 text-xs">
-                      <span className={`w-2 h-2 rounded-full flex-shrink-0 ${statusDisplay.color}`} />
-                      <span className="font-semibold text-gray-900 truncate">
-                        {alert.userName} <span className="font-normal text-gray-600">with</span> {alert.dateName}
-                      </span>
-                      <span className="text-purple-600 font-medium flex-shrink-0">(Our User Date)</span>
-                      <span className="text-gray-400 ml-auto flex-shrink-0">{getTimeSince(alert.lastCheckIn)}</span>
+                    {/* Banner de Estado de Sesión con efecto latido */}
+                    <div className={`${sessionBanner.bg} text-white px-3 py-1.5 flex items-center gap-2 animate-pulse`}>
+                      {sessionBanner.icon}
+                      <span className="font-bold text-sm">{sessionBanner.text}</span>
+                      <span className="ml-auto text-xs opacity-90">{getTimeSince(alert.lastCheckIn)}</span>
                     </div>
-                    {/* Línea 2: @ LocationType: - Address + Badge */}
-                    <div className="flex items-center gap-1.5 text-xs mt-0.5 pl-3.5">
-                      <span className="text-gray-500 truncate flex-1">
-                        @ {alert.locationType || 'Location'}: {alert.dateAddress || alert.dateLocation}
-                      </span>
-                      {/* Status Badge */}
-                      <span className={`px-1.5 py-0.5 rounded text-[10px] font-semibold flex-shrink-0 ${statusDisplay.bgLight} ${statusDisplay.textColor}`}>
-                        {statusDisplay.text}
-                      </span>
-                      {/* Device Status Badge (Battery/Signal) */}
-                      {(() => {
-                        const deviceStatus = getDeviceStatusDisplay(alert);
-                        if (deviceStatus) {
-                          return (
-                            <span
-                              className={`px-1.5 py-0.5 rounded text-[10px] font-semibold flex-shrink-0 ${deviceStatus.bgColor} ${deviceStatus.textColor} ${deviceStatus.animate ? 'animate-pulse' : ''} flex items-center gap-1`}
-                              title={deviceStatus.description}
-                            >
-                              <DeviceStatusIcon type={deviceStatus.icon} />
-                              {deviceStatus.text}
-                            </span>
-                          );
-                        }
-                        return null;
-                      })()}
-                      {alert.currentLocation && (alert.currentLocation.latitude !== 0 || alert.currentLocation.longitude !== 0) && (
-                        <svg className="h-3 w-3 text-green-500 flex-shrink-0" fill="currentColor" viewBox="0 0 24 24">
-                          <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/>
+
+                    {/* Contenido de la alerta */}
+                    <div className="px-3 py-2 bg-white">
+                      {/* Línea 1: UserName with DateName */}
+                      <div className="flex items-center gap-1.5 text-xs">
+                        <span className="font-semibold text-gray-900 truncate">
+                          {alert.userName} <span className="font-normal text-gray-600">with</span> {alert.dateName}
+                        </span>
+                        <span className="text-purple-600 font-medium flex-shrink-0">(Our User)</span>
+                      </div>
+
+                      {/* Línea 2: Location */}
+                      <div className="flex items-center gap-1.5 text-xs mt-1 text-gray-500">
+                        <svg className="h-3 w-3 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
                         </svg>
+                        <span className="truncate">
+                          {alert.locationType || 'Location'}: {alert.dateAddress || alert.dateLocation}
+                        </span>
+                        {alert.currentLocation && (alert.currentLocation.latitude !== 0 || alert.currentLocation.longitude !== 0) && (
+                          <svg className="h-3 w-3 text-green-500 flex-shrink-0 ml-auto" fill="currentColor" viewBox="0 0 24 24" title="GPS Available">
+                            <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/>
+                          </svg>
+                        )}
+                      </div>
+
+                      {/* Línea 3: Device Status Badge (si aplica) */}
+                      {deviceStatus && (
+                        <div className="mt-2">
+                          <span
+                            className={`inline-flex items-center gap-1 px-2 py-1 rounded text-[11px] font-semibold ${deviceStatus.bgColor} ${deviceStatus.textColor} animate-pulse`}
+                            title={deviceStatus.description}
+                          >
+                            <DeviceStatusIcon type={deviceStatus.icon} />
+                            {deviceStatus.text}
+                          </span>
+                        </div>
                       )}
                     </div>
                   </div>
