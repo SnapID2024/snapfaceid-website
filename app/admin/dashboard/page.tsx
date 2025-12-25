@@ -43,6 +43,14 @@ interface Alert {
     longitude: number;
     timestamp: string;
   };
+  // === CAMPOS PARA DETECCIÓN DE DISPOSITIVO OFFLINE ===
+  deviceOffline?: boolean;  // Si el dispositivo perdió conexión (sin heartbeat)
+  offlineReason?: 'battery_dead' | 'battery_critical' | 'no_signal' | 'app_closed_or_signal_lost' | null;
+  lastHeartbeat?: string;   // Última vez que el dispositivo envió heartbeat
+  batteryLevel?: number;    // Nivel de batería (0-100)
+  batteryState?: 'charging' | 'unplugged' | 'full' | 'unknown';  // Estado de carga
+  batteryWarning?: boolean; // Si la batería está baja
+  networkType?: 'wifi' | 'cellular' | 'none' | 'unknown';  // Tipo de conexión
 }
 
 interface HistoryEntry {
@@ -83,6 +91,116 @@ const getStatusDisplay = (status: Alert['status']) => {
       return { color: 'bg-blue-500', text: 'Safe', textColor: 'text-blue-700', bgLight: 'bg-blue-100' };
     default:
       return { color: 'bg-gray-500', text: 'Unknown', textColor: 'text-gray-700', bgLight: 'bg-gray-100' };
+  }
+};
+
+// Función para obtener el indicador de estado del dispositivo (batería/señal)
+const getDeviceStatusDisplay = (alert: Alert) => {
+  if (!alert.deviceOffline) {
+    // Device online - show battery/network info if available
+    if (alert.batteryWarning && alert.batteryLevel !== undefined) {
+      return {
+        show: true,
+        icon: 'battery_low',
+        text: `${alert.batteryLevel}%`,
+        bgColor: 'bg-yellow-500',
+        textColor: 'text-yellow-900',
+        bgLight: 'bg-yellow-100',
+        description: 'Low battery warning',
+        animate: true,
+      };
+    }
+    return null; // No special indicator needed
+  }
+
+  // Device is offline - show reason
+  switch (alert.offlineReason) {
+    case 'battery_dead':
+      return {
+        show: true,
+        icon: 'battery_dead',
+        text: 'BATTERY DEAD',
+        bgColor: 'bg-red-800',
+        textColor: 'text-white',
+        bgLight: 'bg-red-200',
+        description: 'Device battery is dead (0%)',
+        animate: true,
+      };
+    case 'battery_critical':
+      return {
+        show: true,
+        icon: 'battery_critical',
+        text: `BATTERY ${alert.batteryLevel || '< 15'}%`,
+        bgColor: 'bg-red-600',
+        textColor: 'text-white',
+        bgLight: 'bg-red-100',
+        description: 'Device battery critically low',
+        animate: true,
+      };
+    case 'no_signal':
+      return {
+        show: true,
+        icon: 'no_signal',
+        text: 'NO SIGNAL',
+        bgColor: 'bg-gray-800',
+        textColor: 'text-white',
+        bgLight: 'bg-gray-200',
+        description: 'Device has no network signal',
+        animate: true,
+      };
+    case 'app_closed_or_signal_lost':
+    default:
+      return {
+        show: true,
+        icon: 'offline',
+        text: 'OFFLINE',
+        bgColor: 'bg-gray-700',
+        textColor: 'text-white',
+        bgLight: 'bg-gray-200',
+        description: 'App closed or signal lost',
+        animate: true,
+      };
+  }
+};
+
+// Componente para el icono de estado del dispositivo
+const DeviceStatusIcon = ({ type }: { type: string }) => {
+  switch (type) {
+    case 'battery_dead':
+      return (
+        <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M17 4h-3V2h-4v2H7c-.55 0-1 .45-1 1v16c0 .55.45 1 1 1h10c.55 0 1-.45 1-1V5c0-.55-.45-1-1-1zm-1 16H8V6h8v14z"/>
+          <path d="M11 8h2v2h-2zM11 11h2v2h-2z" opacity="0.3"/>
+          <line x1="6" y1="20" x2="18" y2="6" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+        </svg>
+      );
+    case 'battery_critical':
+      return (
+        <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M17 4h-3V2h-4v2H7c-.55 0-1 .45-1 1v16c0 .55.45 1 1 1h10c.55 0 1-.45 1-1V5c0-.55-.45-1-1-1zm-1 16H8V6h8v14z"/>
+          <rect x="9" y="16" width="6" height="3" fill="currentColor"/>
+        </svg>
+      );
+    case 'battery_low':
+      return (
+        <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M17 4h-3V2h-4v2H7c-.55 0-1 .45-1 1v16c0 .55.45 1 1 1h10c.55 0 1-.45 1-1V5c0-.55-.45-1-1-1zm-1 16H8V6h8v14z"/>
+          <rect x="9" y="14" width="6" height="5" fill="currentColor"/>
+        </svg>
+      );
+    case 'no_signal':
+      return (
+        <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+          <path d="M1 1l22 22M16.72 11.06A10.94 10.94 0 0119 12.55M5 12.55a10.94 10.94 0 015.17-2.39M10.71 5.05A16 16 0 0122.58 9M1.42 9a16 16 0 014.41-2.37M8.53 16.11a6 6 0 016.95 0M12 20h.01"/>
+        </svg>
+      );
+    case 'offline':
+    default:
+      return (
+        <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+          <path d="M18.364 5.636a9 9 0 010 12.728m0 0l-2.829-2.829m2.829 2.829L21 21M15.536 8.464a5 5 0 010 7.072m0 0l-2.829-2.829m-4.243 2.829a4.978 4.978 0 01-1.414-2.83m-1.414 5.658a9 9 0 01-2.167-9.238m7.824 2.167a1 1 0 111.414 1.414m-1.414-1.414L3 3"/>
+        </svg>
+      );
   }
 };
 
@@ -903,6 +1021,22 @@ SnapfaceID Guardian`;
                       <span className={`px-1.5 py-0.5 rounded text-[10px] font-semibold flex-shrink-0 ${statusDisplay.bgLight} ${statusDisplay.textColor}`}>
                         {statusDisplay.text}
                       </span>
+                      {/* Device Status Badge (Battery/Signal) */}
+                      {(() => {
+                        const deviceStatus = getDeviceStatusDisplay(alert);
+                        if (deviceStatus) {
+                          return (
+                            <span
+                              className={`px-1.5 py-0.5 rounded text-[10px] font-semibold flex-shrink-0 ${deviceStatus.bgColor} ${deviceStatus.textColor} ${deviceStatus.animate ? 'animate-pulse' : ''} flex items-center gap-1`}
+                              title={deviceStatus.description}
+                            >
+                              <DeviceStatusIcon type={deviceStatus.icon} />
+                              {deviceStatus.text}
+                            </span>
+                          );
+                        }
+                        return null;
+                      })()}
                       {alert.currentLocation && (alert.currentLocation.latitude !== 0 || alert.currentLocation.longitude !== 0) && (
                         <svg className="h-3 w-3 text-green-500 flex-shrink-0" fill="currentColor" viewBox="0 0 24 24">
                           <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/>
@@ -955,6 +1089,113 @@ SnapfaceID Guardian`;
                     </div>
                   </div>
                 </div>
+
+                {/* Device Status Warning Banner */}
+                {(() => {
+                  const deviceStatus = getDeviceStatusDisplay(selectedAlert);
+                  if (!deviceStatus) return null;
+
+                  // Define banner styles based on offline reason
+                  const getBannerStyles = () => {
+                    switch (selectedAlert.offlineReason) {
+                      case 'battery_dead':
+                        return {
+                          bg: 'bg-red-900',
+                          iconBg: 'bg-red-600',
+                          title: 'BATTERY DEAD',
+                          description: 'User device battery is completely drained.',
+                          icon: (
+                            <svg className="h-6 w-6" viewBox="0 0 24 24" fill="currentColor">
+                              <path d="M17 4h-3V2h-4v2H7c-.55 0-1 .45-1 1v16c0 .55.45 1 1 1h10c.55 0 1-.45 1-1V5c0-.55-.45-1-1-1zm-1 16H8V6h8v14z"/>
+                              <line x1="6" y1="20" x2="18" y2="6" stroke="white" strokeWidth="2.5" strokeLinecap="round"/>
+                            </svg>
+                          ),
+                        };
+                      case 'battery_critical':
+                        return {
+                          bg: 'bg-red-800',
+                          iconBg: 'bg-red-500',
+                          title: 'BATTERY CRITICAL',
+                          description: `User device battery critically low (${selectedAlert.batteryLevel || '< 15'}%).`,
+                          icon: (
+                            <svg className="h-6 w-6" viewBox="0 0 24 24" fill="currentColor">
+                              <path d="M17 4h-3V2h-4v2H7c-.55 0-1 .45-1 1v16c0 .55.45 1 1 1h10c.55 0 1-.45 1-1V5c0-.55-.45-1-1-1zm-1 16H8V6h8v14z"/>
+                              <rect x="9" y="16" width="6" height="3" fill="currentColor"/>
+                            </svg>
+                          ),
+                        };
+                      case 'no_signal':
+                        return {
+                          bg: 'bg-gray-800',
+                          iconBg: 'bg-gray-600',
+                          title: 'NO SIGNAL',
+                          description: 'User device has lost network signal (WiFi and cellular unavailable).',
+                          icon: (
+                            <svg className="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                              <path d="M1 1l22 22M16.72 11.06A10.94 10.94 0 0119 12.55M5 12.55a10.94 10.94 0 015.17-2.39M10.71 5.05A16 16 0 0122.58 9M1.42 9a16 16 0 014.41-2.37M8.53 16.11a6 6 0 016.95 0M12 20h.01"/>
+                            </svg>
+                          ),
+                        };
+                      case 'app_closed_or_signal_lost':
+                      default:
+                        return {
+                          bg: 'bg-gray-900',
+                          iconBg: 'bg-gray-600',
+                          title: 'DEVICE OFFLINE',
+                          description: 'User device lost connection (app may be closed or signal lost).',
+                          icon: (
+                            <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 5.636a9 9 0 010 12.728m0 0l-2.829-2.829m2.829 2.829L21 21M15.536 8.464a5 5 0 010 7.072m0 0l-2.829-2.829m-4.243 2.829a4.978 4.978 0 01-1.414-2.83m-1.414 5.658a9 9 0 01-2.167-9.238m7.824 2.167a1 1 0 111.414 1.414m-1.414-1.414L3 3m8.293 8.293l1.414 1.414" />
+                            </svg>
+                          ),
+                        };
+                    }
+                  };
+
+                  const bannerStyles = getBannerStyles();
+
+                  return (
+                    <div className="border-t pt-3 mt-3">
+                      <div className={`${bannerStyles.bg} text-white rounded-lg p-4 flex items-center gap-4 animate-pulse`}>
+                        <div className={`${bannerStyles.iconBg} rounded-full p-2`}>
+                          {bannerStyles.icon}
+                        </div>
+                        <div className="flex-1">
+                          <h4 className="font-bold text-lg">{bannerStyles.title}</h4>
+                          <p className="text-gray-300 text-sm">
+                            {bannerStyles.description}
+                            {selectedAlert.lastHeartbeat && (
+                              <span className="ml-2">Last heartbeat: {getTimeSince(selectedAlert.lastHeartbeat)}</span>
+                            )}
+                          </p>
+                          <p className="text-yellow-400 text-xs mt-1 font-medium">
+                            Guardian backend continues monitoring. Emergency alerts will still be triggered.
+                          </p>
+                        </div>
+                        {/* Battery Level Display */}
+                        {selectedAlert.batteryLevel !== undefined && (
+                          <div className="text-center">
+                            <div className={`text-2xl font-bold ${selectedAlert.batteryLevel <= 15 ? 'text-red-400' : selectedAlert.batteryLevel <= 30 ? 'text-yellow-400' : 'text-green-400'}`}>
+                              {selectedAlert.batteryLevel}%
+                            </div>
+                            <div className="text-xs text-gray-400">Last Battery</div>
+                          </div>
+                        )}
+                        {/* Network Type Display */}
+                        {selectedAlert.networkType && (
+                          <div className="text-center">
+                            <div className={`text-sm font-bold ${selectedAlert.networkType === 'none' ? 'text-red-400' : 'text-gray-400'}`}>
+                              {selectedAlert.networkType === 'wifi' ? '📶 WiFi' :
+                               selectedAlert.networkType === 'cellular' ? '📱 Cellular' :
+                               selectedAlert.networkType === 'none' ? '❌ None' : '? Unknown'}
+                            </div>
+                            <div className="text-xs text-gray-400">Network</div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })()}
 
                 {/* Timeline - Compact horizontal */}
                 <div className="border-t pt-3 mt-3">
