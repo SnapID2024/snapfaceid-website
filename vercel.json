@@ -1,0 +1,5 @@
+{
+  "env": {
+    "BACKEND_API_URL": "https://api.snapfaceid.com"
+  }
+}
