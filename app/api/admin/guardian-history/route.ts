@@ -35,6 +35,9 @@ export async function GET(request: NextRequest) {
     const adminPass = process.env.ADMIN_PASSWORD || ''
     const backendToken = `${adminUser}:${adminPass}`
 
+    console.log(`[guardian-history] Fetching from: ${BACKEND_URL}/guardian/admin/history`)
+    console.log(`[guardian-history] Using admin: ${adminUser}`)
+
     // Fetch Guardian history from backend
     const response = await fetch(`${BACKEND_URL}/guardian/admin/history`, {
       method: 'GET',
@@ -42,28 +45,41 @@ export async function GET(request: NextRequest) {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${backendToken}`,
       },
+      cache: 'no-store',
     })
 
+    console.log(`[guardian-history] Backend response status: ${response.status}`)
+
     if (!response.ok) {
+      const errorText = await response.text()
+      console.error(`[guardian-history] Backend error: ${response.status} - ${errorText}`)
+
       // If backend endpoint doesn't exist yet, return empty data
       if (response.status === 404) {
-        console.log('Guardian history endpoint not found, returning empty list')
         return NextResponse.json({ history: [], count: 0 })
       }
-      throw new Error(`Backend error: ${response.status}`)
+      return NextResponse.json({
+        history: [],
+        count: 0,
+        message: `Backend error: ${response.status}`,
+        debug: { status: response.status, error: errorText }
+      })
     }
 
     const data = await response.json()
+    console.log(`[guardian-history] Success - count: ${data.count}`)
     return NextResponse.json(data)
 
   } catch (error) {
-    console.error('Error fetching guardian history:', error)
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+    console.error('[guardian-history] Exception:', errorMessage)
 
     // Return empty data if backend is not available
     return NextResponse.json({
       history: [],
       count: 0,
       message: 'Unable to fetch history. Backend may be offline.',
+      debug: { error: errorMessage, backendUrl: BACKEND_URL }
     })
   }
 }
