@@ -31,8 +31,8 @@ export async function GET(request: NextRequest) {
     }
 
     // Get admin credentials for backend authentication
-    const adminUser = process.env.ADMIN_USER || ''
-    const adminPass = process.env.ADMIN_PASS || ''
+    const adminUser = process.env.ADMIN_USERNAME || 'admin'
+    const adminPass = process.env.ADMIN_PASSWORD || ''
     const backendToken = `${adminUser}:${adminPass}`
 
     // Fetch Guardian history from backend
