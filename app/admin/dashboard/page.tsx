@@ -151,28 +151,19 @@ const getDeviceStatusDisplay = (alert: Alert) => {
         animate: true,
       };
     case 'device_sleeping':
-      // Dispositivo probablemente bloqueado - NO es emergencia
+    case 'app_closed_or_signal_lost':
+    default:
+      // Dispositivo no responde - pero NO es emergencia
+      // iOS suspende la app cuando la pantalla se bloquea, esto es comportamiento normal
       return {
         show: true,
         icon: 'sleeping',
-        text: 'SCREEN LOCKED',
-        bgColor: 'bg-blue-500',  // Azul - estado normal, no es emergencia
+        text: 'STANDBY',
+        bgColor: 'bg-slate-500',  // Gris azulado - estado normal
         textColor: 'text-white',
-        bgLight: 'bg-blue-100',
-        description: 'Phone locked - app suspended by iOS (normal)',
+        bgLight: 'bg-slate-100',
+        description: 'Screen locked or app in background (normal)',
         animate: false,  // Sin animación - no es urgente
-      };
-    case 'app_closed_or_signal_lost':
-    default:
-      return {
-        show: true,
-        icon: 'device_lock',
-        text: 'Device Lock',
-        bgColor: 'bg-gray-600',  // Gris medio
-        textColor: 'text-white',
-        bgLight: 'bg-gray-200',
-        description: 'Device locked or app closed',
-        animate: false,  // Sin animación - es situación normal
       };
   }
 };
@@ -209,24 +200,12 @@ const DeviceStatusIcon = ({ type }: { type: string }) => {
         </svg>
       );
     case 'sleeping':
-      // Icono de luna para indicar pantalla bloqueada
+    case 'offline':
+    default:
+      // Icono de luna para indicar standby/pantalla bloqueada
       return (
         <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="currentColor">
           <path d="M12 3c-4.97 0-9 4.03-9 9s4.03 9 9 9 9-4.03 9-9c0-.46-.04-.92-.1-1.36-.98 1.37-2.58 2.26-4.4 2.26-3.03 0-5.5-2.47-5.5-5.5 0-1.82.89-3.42 2.26-4.4-.44-.06-.9-.1-1.36-.1z"/>
-        </svg>
-      );
-    case 'device_lock':
-      // Icono de candado para dispositivo bloqueado o app cerrada
-      return (
-        <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-          <path strokeLinecap="round" strokeLinejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-        </svg>
-      );
-    case 'offline':
-    default:
-      return (
-        <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-          <path d="M18.364 5.636a9 9 0 010 12.728m0 0l-2.829-2.829m2.829 2.829L21 21M15.536 8.464a5 5 0 010 7.072m0 0l-2.829-2.829m-4.243 2.829a4.978 4.978 0 01-1.414-2.83m-1.414 5.658a9 9 0 01-2.167-9.238m7.824 2.167a1 1 0 111.414 1.414m-1.414-1.414L3 3"/>
         </svg>
       );
   }
@@ -1241,32 +1220,20 @@ SnapfaceID Guardian`;
                           ),
                         };
                       case 'device_sleeping':
-                        // Dispositivo bloqueado - NO es emergencia
+                      case 'app_closed_or_signal_lost':
+                      default:
+                        // Dispositivo en standby - NO es emergencia
+                        // iOS suspende apps cuando la pantalla se bloquea
                         return {
-                          bg: 'bg-blue-500',  // Azul - estado normal
-                          iconBg: 'bg-blue-400',
-                          title: 'SCREEN LOCKED',
-                          description: 'Phone is locked - iOS suspended the app. This is normal behavior.',
+                          bg: 'bg-slate-500',  // Gris azulado - estado normal
+                          iconBg: 'bg-slate-400',
+                          title: 'STANDBY',
+                          description: 'Screen locked or app in background. iOS suspends apps when phone is locked - this is normal.',
                           animate: false,  // Sin animación - no es urgente
                           isNormal: true,  // Flag para mensaje diferente
                           icon: (
                             <svg className="h-6 w-6" viewBox="0 0 24 24" fill="currentColor">
                               <path d="M12 3c-4.97 0-9 4.03-9 9s4.03 9 9 9 9-4.03 9-9c0-.46-.04-.92-.1-1.36-.98 1.37-2.58 2.26-4.4 2.26-3.03 0-5.5-2.47-5.5-5.5 0-1.82.89-3.42 2.26-4.4-.44-.06-.9-.1-1.36-.1z"/>
-                            </svg>
-                          ),
-                        };
-                      case 'app_closed_or_signal_lost':
-                      default:
-                        return {
-                          bg: 'bg-gray-600',  // Gris medio
-                          iconBg: 'bg-gray-400',
-                          title: 'DEVICE LOCK',
-                          description: 'User device may have the device locked or app closed.',
-                          animate: false,  // Sin animación - es situación normal
-                          isNormal: true,  // Flag para mensaje diferente
-                          icon: (
-                            <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
                             </svg>
                           ),
                         };
