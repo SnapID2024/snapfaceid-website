@@ -45,7 +45,8 @@ interface Alert {
   };
   // === CAMPOS PARA DETECCIÓN DE DISPOSITIVO OFFLINE ===
   deviceOffline?: boolean;  // Si el dispositivo perdió conexión (sin heartbeat)
-  offlineReason?: 'battery_dead' | 'battery_critical' | 'no_signal' | 'app_closed_or_signal_lost' | null;
+  deviceSleeping?: boolean; // Si el dispositivo está probablemente bloqueado (no es emergencia)
+  offlineReason?: 'battery_dead' | 'battery_critical' | 'no_signal' | 'device_sleeping' | 'app_closed_or_signal_lost' | null;
   lastHeartbeat?: string;   // Última vez que el dispositivo envió heartbeat
   batteryLevel?: number;    // Nivel de batería (0-100)
   batteryState?: 'charging' | 'unplugged' | 'full' | 'unknown';  // Estado de carga
@@ -95,7 +96,7 @@ const getStatusDisplay = (status: Alert['status']) => {
 };
 
 // Función para obtener el indicador de estado del dispositivo (batería/señal)
-// NOTA: Solo Emergency debe ser rojo - todos los estados de dispositivo son grises
+// NOTA: Solo Emergency debe ser rojo - estados de dispositivo son grises/azules
 const getDeviceStatusDisplay = (alert: Alert) => {
   if (!alert.deviceOffline) {
     // Device online - show battery/network info if available
@@ -114,7 +115,7 @@ const getDeviceStatusDisplay = (alert: Alert) => {
     return null; // No special indicator needed
   }
 
-  // Device is offline - show reason (todos en tonos de gris)
+  // Device is offline - show reason
   switch (alert.offlineReason) {
     case 'battery_dead':
       return {
@@ -149,17 +150,29 @@ const getDeviceStatusDisplay = (alert: Alert) => {
         description: 'Device has no network signal',
         animate: true,
       };
+    case 'device_sleeping':
+      // Dispositivo probablemente bloqueado - NO es emergencia
+      return {
+        show: true,
+        icon: 'sleeping',
+        text: 'SCREEN LOCKED',
+        bgColor: 'bg-blue-500',  // Azul - estado normal, no es emergencia
+        textColor: 'text-white',
+        bgLight: 'bg-blue-100',
+        description: 'Phone locked - app suspended by iOS (normal)',
+        animate: false,  // Sin animación - no es urgente
+      };
     case 'app_closed_or_signal_lost':
     default:
       return {
         show: true,
-        icon: 'offline',
-        text: 'OFFLINE',
+        icon: 'device_lock',
+        text: 'Device Lock',
         bgColor: 'bg-gray-600',  // Gris medio
         textColor: 'text-white',
         bgLight: 'bg-gray-200',
-        description: 'App closed or signal lost',
-        animate: true,
+        description: 'Device locked or app closed',
+        animate: false,  // Sin animación - es situación normal
       };
   }
 };
@@ -193,6 +206,20 @@ const DeviceStatusIcon = ({ type }: { type: string }) => {
       return (
         <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
           <path d="M1 1l22 22M16.72 11.06A10.94 10.94 0 0119 12.55M5 12.55a10.94 10.94 0 015.17-2.39M10.71 5.05A16 16 0 0122.58 9M1.42 9a16 16 0 014.41-2.37M8.53 16.11a6 6 0 016.95 0M12 20h.01"/>
+        </svg>
+      );
+    case 'sleeping':
+      // Icono de luna para indicar pantalla bloqueada
+      return (
+        <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M12 3c-4.97 0-9 4.03-9 9s4.03 9 9 9 9-4.03 9-9c0-.46-.04-.92-.1-1.36-.98 1.37-2.58 2.26-4.4 2.26-3.03 0-5.5-2.47-5.5-5.5 0-1.82.89-3.42 2.26-4.4-.44-.06-.9-.1-1.36-.1z"/>
+        </svg>
+      );
+    case 'device_lock':
+      // Icono de candado para dispositivo bloqueado o app cerrada
+      return (
+        <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+          <path strokeLinecap="round" strokeLinejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
         </svg>
       );
     case 'offline':
@@ -1081,7 +1108,7 @@ SnapfaceID Guardian`;
                         <span className="font-semibold text-gray-900 truncate">
                           {alert.userName} <span className="font-normal text-gray-600">with</span> {alert.dateName}
                         </span>
-                        <span className="text-purple-600 font-medium flex-shrink-0">(Our User)</span>
+                        <span className="text-purple-600 font-medium flex-shrink-0">(Our User's Date)</span>
                       </div>
 
                       {/* Línea 2: Location */}
@@ -1178,6 +1205,7 @@ SnapfaceID Guardian`;
                           iconBg: 'bg-gray-700',
                           title: 'BATTERY DEAD',
                           description: 'User device battery is completely drained.',
+                          animate: true,
                           icon: (
                             <svg className="h-6 w-6" viewBox="0 0 24 24" fill="currentColor">
                               <path d="M17 4h-3V2h-4v2H7c-.55 0-1 .45-1 1v16c0 .55.45 1 1 1h10c.55 0 1-.45 1-1V5c0-.55-.45-1-1-1zm-1 16H8V6h8v14z"/>
@@ -1191,6 +1219,7 @@ SnapfaceID Guardian`;
                           iconBg: 'bg-gray-600',
                           title: 'BATTERY CRITICAL',
                           description: `User device battery critically low (${selectedAlert.batteryLevel || '< 15'}%).`,
+                          animate: true,
                           icon: (
                             <svg className="h-6 w-6" viewBox="0 0 24 24" fill="currentColor">
                               <path d="M17 4h-3V2h-4v2H7c-.55 0-1 .45-1 1v16c0 .55.45 1 1 1h10c.55 0 1-.45 1-1V5c0-.55-.45-1-1-1zm-1 16H8V6h8v14z"/>
@@ -1204,9 +1233,25 @@ SnapfaceID Guardian`;
                           iconBg: 'bg-gray-500',
                           title: 'NO SIGNAL',
                           description: 'User device has lost network signal (WiFi and cellular unavailable).',
+                          animate: true,
                           icon: (
                             <svg className="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                               <path d="M1 1l22 22M16.72 11.06A10.94 10.94 0 0119 12.55M5 12.55a10.94 10.94 0 015.17-2.39M10.71 5.05A16 16 0 0122.58 9M1.42 9a16 16 0 014.41-2.37M8.53 16.11a6 6 0 016.95 0M12 20h.01"/>
+                            </svg>
+                          ),
+                        };
+                      case 'device_sleeping':
+                        // Dispositivo bloqueado - NO es emergencia
+                        return {
+                          bg: 'bg-blue-500',  // Azul - estado normal
+                          iconBg: 'bg-blue-400',
+                          title: 'SCREEN LOCKED',
+                          description: 'Phone is locked - iOS suspended the app. This is normal behavior.',
+                          animate: false,  // Sin animación - no es urgente
+                          isNormal: true,  // Flag para mensaje diferente
+                          icon: (
+                            <svg className="h-6 w-6" viewBox="0 0 24 24" fill="currentColor">
+                              <path d="M12 3c-4.97 0-9 4.03-9 9s4.03 9 9 9 9-4.03 9-9c0-.46-.04-.92-.1-1.36-.98 1.37-2.58 2.26-4.4 2.26-3.03 0-5.5-2.47-5.5-5.5 0-1.82.89-3.42 2.26-4.4-.44-.06-.9-.1-1.36-.1z"/>
                             </svg>
                           ),
                         };
@@ -1215,11 +1260,13 @@ SnapfaceID Guardian`;
                         return {
                           bg: 'bg-gray-600',  // Gris medio
                           iconBg: 'bg-gray-400',
-                          title: 'DEVICE OFFLINE',
-                          description: 'User device lost connection (app may be closed or signal lost).',
+                          title: 'DEVICE LOCK',
+                          description: 'User device may have the device locked or app closed.',
+                          animate: false,  // Sin animación - es situación normal
+                          isNormal: true,  // Flag para mensaje diferente
                           icon: (
                             <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 5.636a9 9 0 010 12.728m0 0l-2.829-2.829m2.829 2.829L21 21M15.536 8.464a5 5 0 010 7.072m0 0l-2.829-2.829m-4.243 2.829a4.978 4.978 0 01-1.414-2.83m-1.414 5.658a9 9 0 01-2.167-9.238m7.824 2.167a1 1 0 111.414 1.414m-1.414-1.414L3 3m8.293 8.293l1.414 1.414" />
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
                             </svg>
                           ),
                         };
@@ -1230,21 +1277,27 @@ SnapfaceID Guardian`;
 
                   return (
                     <div className="border-t pt-3 mt-3">
-                      <div className={`${bannerStyles.bg} text-white rounded-lg p-4 flex items-center gap-4 animate-pulse`}>
+                      <div className={`${bannerStyles.bg} text-white rounded-lg p-4 flex items-center gap-4 ${bannerStyles.animate !== false ? 'animate-pulse' : ''}`}>
                         <div className={`${bannerStyles.iconBg} rounded-full p-2`}>
                           {bannerStyles.icon}
                         </div>
                         <div className="flex-1">
                           <h4 className="font-bold text-lg">{bannerStyles.title}</h4>
-                          <p className="text-gray-300 text-sm">
+                          <p className={`${bannerStyles.isNormal ? 'text-blue-100' : 'text-gray-300'} text-sm`}>
                             {bannerStyles.description}
                             {selectedAlert.lastHeartbeat && (
                               <span className="ml-2">Last heartbeat: {getTimeSince(selectedAlert.lastHeartbeat)}</span>
                             )}
                           </p>
-                          <p className="text-yellow-400 text-xs mt-1 font-medium">
-                            Guardian backend continues monitoring. Emergency alerts will still be triggered.
-                          </p>
+                          {bannerStyles.isNormal ? (
+                            <p className="text-blue-200 text-xs mt-1 font-medium">
+                              ✓ No action needed. When user unlocks phone, app will resume automatically.
+                            </p>
+                          ) : (
+                            <p className="text-yellow-400 text-xs mt-1 font-medium">
+                              Guardian backend continues monitoring. Emergency alerts will still be triggered.
+                            </p>
+                          )}
                         </div>
                         {/* Battery Level Display */}
                         {selectedAlert.batteryLevel !== undefined && (
