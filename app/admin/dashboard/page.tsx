@@ -77,6 +77,19 @@ interface HistoryEntry {
   endStatus: 'safe' | 'emergency';
 }
 
+// Tipos para Advertiser (mensajes tipo ticker)
+type AdvertiserAudience = 'all' | 'premium' | 'free' | 'specific';
+
+interface AdvertiserMessage {
+  id: string;
+  message: string;
+  audience: AdvertiserAudience;
+  specificPhone?: string;
+  expiresAt: string;
+  createdAt: string;
+  active: boolean;
+}
+
 type FilterType = 'all' | 'active' | 'no_response' | 'emergency' | 'safe';
 
 // Función para obtener el color y texto del estado
@@ -229,6 +242,16 @@ export default function AdminDashboard() {
   const [recipientEmail, setRecipientEmail] = useState('');
   const [sendingEmail, setSendingEmail] = useState(false);
   const [smsRecipientPhone, setSmsRecipientPhone] = useState('');
+
+  // Estados para Advertiser
+  const [showAdvertiser, setShowAdvertiser] = useState(false);
+  const [advertiserMessages, setAdvertiserMessages] = useState<AdvertiserMessage[]>([]);
+  const [advertiserLoading, setAdvertiserLoading] = useState(false);
+  const [newMessage, setNewMessage] = useState('');
+  const [newMessageAudience, setNewMessageAudience] = useState<AdvertiserAudience>('all');
+  const [newMessagePhone, setNewMessagePhone] = useState('');
+  const [newMessageExpiry, setNewMessageExpiry] = useState('');
+  const [savingMessage, setSavingMessage] = useState(false);
 
   // Derived state: check if any device is offline (for faster polling)
   const hasOfflineDevices = alerts.some(a => a.deviceOffline);
@@ -423,6 +446,100 @@ export default function AdminDashboard() {
 
   const handleBackToAlerts = () => {
     setShowHistory(false);
+    setShowAdvertiser(false);
+  };
+
+  // ─────────── Funciones de Advertiser ───────────
+  const fetchAdvertiserMessages = async () => {
+    const token = localStorage.getItem('adminToken');
+    if (!token) return;
+
+    setAdvertiserLoading(true);
+    try {
+      const response = await fetch('/api/admin/advertiser-messages', {
+        headers: { 'Authorization': `Bearer ${token}` },
+      });
+      const data = await response.json();
+      if (data.messages) {
+        setAdvertiserMessages(data.messages);
+      }
+    } catch (err) {
+      console.error('Error fetching advertiser messages:', err);
+    } finally {
+      setAdvertiserLoading(false);
+    }
+  };
+
+  const handleShowAdvertiser = () => {
+    setShowAdvertiser(true);
+    setShowHistory(false);
+    fetchAdvertiserMessages();
+  };
+
+  const handleSaveMessage = async () => {
+    if (!newMessage.trim() || !newMessageExpiry) {
+      alert('Please fill in the message and expiration date');
+      return;
+    }
+
+    const token = localStorage.getItem('adminToken');
+    if (!token) {
+      alert('Not authenticated');
+      return;
+    }
+
+    setSavingMessage(true);
+    try {
+      const response = await fetch('/api/admin/advertiser-messages', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          message: newMessage.trim(),
+          audience: newMessageAudience,
+          specificPhone: newMessageAudience === 'specific' ? newMessagePhone : undefined,
+          expiresAt: newMessageExpiry,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        // Reset form
+        setNewMessage('');
+        setNewMessageAudience('all');
+        setNewMessagePhone('');
+        setNewMessageExpiry('');
+        // Refresh messages
+        fetchAdvertiserMessages();
+        alert('Message created successfully!');
+      } else {
+        console.error('Error response:', data);
+        alert(`Error: ${data.error || 'Failed to create message'}`);
+      }
+    } catch (err) {
+      console.error('Error saving message:', err);
+      alert(`Network error: ${err instanceof Error ? err.message : 'Unknown error'}`);
+    } finally {
+      setSavingMessage(false);
+    }
+  };
+
+  const handleDeleteMessage = async (messageId: string) => {
+    const token = localStorage.getItem('adminToken');
+    if (!token) return;
+
+    try {
+      await fetch(`/api/admin/advertiser-messages/${messageId}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${token}` },
+      });
+      fetchAdvertiserMessages();
+    } catch (err) {
+      console.error('Error deleting message:', err);
+    }
   };
 
   const filteredAlerts = alerts.filter((alert) => {
@@ -823,13 +940,13 @@ Please respond immediately.`;
               return (
                 <button
                   key={f}
-                  onClick={() => { setFilter(f); setShowHistory(false); }}
+                  onClick={() => { setFilter(f); setShowHistory(false); setShowAdvertiser(false); }}
                   className={`px-4 py-2 rounded-lg font-medium text-sm whitespace-nowrap transition-all ${
-                    filter === f && !showHistory ? 'bg-[#6A1B9A] text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                    filter === f && !showHistory && !showAdvertiser ? 'bg-[#6A1B9A] text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                   }`}
                 >
                   {displayName}
-                  <span className={`ml-2 px-2 py-0.5 rounded-full text-xs ${filter === f && !showHistory ? 'bg-white/20' : 'bg-gray-200'}`}>
+                  <span className={`ml-2 px-2 py-0.5 rounded-full text-xs ${filter === f && !showHistory && !showAdvertiser ? 'bg-white/20' : 'bg-gray-200'}`}>
                     {alertCounts[f]}
                   </span>
                 </button>
@@ -841,16 +958,28 @@ Please respond immediately.`;
             <button
               onClick={handleShowHistory}
               className={`px-4 py-2 rounded-lg font-medium text-sm whitespace-nowrap transition-all flex items-center gap-2 ${
-                showHistory ? 'bg-[#6A1B9A] text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                showHistory && !showAdvertiser ? 'bg-[#6A1B9A] text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
               }`}
             >
               <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
               History
-              <span className={`px-2 py-0.5 rounded-full text-xs ${showHistory ? 'bg-white/20' : 'bg-gray-200'}`}>
+              <span className={`px-2 py-0.5 rounded-full text-xs ${showHistory && !showAdvertiser ? 'bg-white/20' : 'bg-gray-200'}`}>
                 90d
               </span>
+            </button>
+            {/* Advertiser Tab */}
+            <button
+              onClick={handleShowAdvertiser}
+              className={`px-4 py-2 rounded-lg font-medium text-sm whitespace-nowrap transition-all flex items-center gap-2 ${
+                showAdvertiser ? 'bg-[#6A1B9A] text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+              }`}
+            >
+              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z" />
+              </svg>
+              Advertiser
             </button>
           </div>
         </div>
@@ -968,6 +1097,199 @@ Please respond immediately.`;
                 ))}
               </div>
             )}
+          </div>
+        ) : showAdvertiser ? (
+          /* Advertiser View */
+          <div className="space-y-6">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={handleBackToAlerts}
+                  className="flex items-center gap-2 text-gray-600 hover:text-gray-900 transition-colors"
+                >
+                  <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                  </svg>
+                </button>
+                <h2 className="font-semibold text-gray-900 text-lg">📢 Advertiser - Broadcast Messages</h2>
+              </div>
+              <span className="text-sm text-gray-500">
+                {advertiserMessages.filter(m => m.active).length} active messages
+              </span>
+            </div>
+
+            {/* Form para crear nuevo mensaje */}
+            <div className="bg-white rounded-xl shadow-sm p-6">
+              <h3 className="font-semibold text-gray-900 mb-4">Create New Message</h3>
+
+              <div className="space-y-4">
+                {/* Mensaje */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Message Text
+                  </label>
+                  <textarea
+                    value={newMessage}
+                    onChange={(e) => setNewMessage(e.target.value)}
+                    placeholder="Enter your broadcast message..."
+                    rows={3}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#6A1B9A] focus:border-transparent resize-none"
+                  />
+                </div>
+
+                {/* Audiencia */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Target Audience
+                  </label>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                    {[
+                      { value: 'all', label: '👥 All Users', desc: 'Premium & Free' },
+                      { value: 'premium', label: '⭐ Premium', desc: 'Premium only' },
+                      { value: 'free', label: '🆓 Free', desc: 'Free users only' },
+                      { value: 'specific', label: '📱 Specific', desc: 'By phone number' },
+                    ].map((opt) => (
+                      <button
+                        key={opt.value}
+                        onClick={() => setNewMessageAudience(opt.value as AdvertiserAudience)}
+                        className={`p-3 rounded-lg border-2 text-left transition-all ${
+                          newMessageAudience === opt.value
+                            ? 'border-[#6A1B9A] bg-purple-50'
+                            : 'border-gray-200 hover:border-gray-300'
+                        }`}
+                      >
+                        <div className="font-medium text-sm">{opt.label}</div>
+                        <div className="text-xs text-gray-500">{opt.desc}</div>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Campo de teléfono (solo si audience es 'specific') */}
+                {newMessageAudience === 'specific' && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Phone Number (with country code)
+                    </label>
+                    <input
+                      type="tel"
+                      value={newMessagePhone}
+                      onChange={(e) => setNewMessagePhone(e.target.value)}
+                      placeholder="+1 555 123 4567"
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#6A1B9A] focus:border-transparent"
+                    />
+                  </div>
+                )}
+
+                {/* Fecha de expiración */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Expiration Date & Time
+                  </label>
+                  <input
+                    type="datetime-local"
+                    value={newMessageExpiry}
+                    onChange={(e) => setNewMessageExpiry(e.target.value)}
+                    min={new Date().toISOString().slice(0, 16)}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#6A1B9A] focus:border-transparent"
+                  />
+                </div>
+
+                {/* Botón guardar */}
+                <button
+                  onClick={handleSaveMessage}
+                  disabled={!newMessage.trim() || !newMessageExpiry || savingMessage || (newMessageAudience === 'specific' && !newMessagePhone)}
+                  className="w-full bg-[#6A1B9A] hover:bg-[#8B4DAE] text-white py-3 rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                >
+                  {savingMessage ? (
+                    <>
+                      <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                      </svg>
+                      Saving...
+                    </>
+                  ) : (
+                    <>
+                      <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                      </svg>
+                      Create Message
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+
+            {/* Lista de mensajes existentes */}
+            <div className="bg-white rounded-xl shadow-sm p-6">
+              <h3 className="font-semibold text-gray-900 mb-4">Active Messages</h3>
+
+              {advertiserLoading ? (
+                <div className="text-center py-8">
+                  <div className="w-8 h-8 border-4 border-[#6A1B9A] border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+                  <p className="text-gray-500">Loading messages...</p>
+                </div>
+              ) : advertiserMessages.length === 0 ? (
+                <div className="text-center py-8 text-gray-500">
+                  <svg className="h-12 w-12 mx-auto mb-3 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z" />
+                  </svg>
+                  <p>No messages yet</p>
+                  <p className="text-sm">Create your first broadcast message above</p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {advertiserMessages.map((msg) => {
+                    const isExpired = new Date(msg.expiresAt) < new Date();
+                    const audienceLabel = msg.audience === 'all' ? '👥 All' :
+                                         msg.audience === 'premium' ? '⭐ Premium' :
+                                         msg.audience === 'free' ? '🆓 Free' :
+                                         `📱 ${msg.specificPhone}`;
+                    return (
+                      <div
+                        key={msg.id}
+                        className={`p-4 rounded-lg border ${isExpired ? 'bg-gray-50 border-gray-200 opacity-60' : 'bg-green-50 border-green-200'}`}
+                      >
+                        <div className="flex items-start justify-between gap-4">
+                          <div className="flex-1">
+                            <p className="font-medium text-gray-900">{msg.message}</p>
+                            <div className="flex items-center gap-3 mt-2 text-sm text-gray-500">
+                              <span className="bg-gray-100 px-2 py-0.5 rounded">{audienceLabel}</span>
+                              <span>
+                                {isExpired ? '❌ Expired' : '✅ Active'} • Expires: {new Date(msg.expiresAt).toLocaleString()}
+                              </span>
+                            </div>
+                          </div>
+                          <button
+                            onClick={() => handleDeleteMessage(msg.id)}
+                            className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                            title="Delete message"
+                          >
+                            <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                            </svg>
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+
+            {/* Info sobre rotación */}
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+              <div className="flex items-start gap-3">
+                <svg className="h-5 w-5 text-blue-500 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <div>
+                  <p className="font-medium text-blue-900">How it works</p>
+                  <p className="text-sm text-blue-700">Messages will appear as a rotating ticker on user profiles, cycling every 15 seconds. Only active (non-expired) messages matching the user&apos;s subscription type will be shown.</p>
+                </div>
+              </div>
+            </div>
           </div>
         ) : (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
