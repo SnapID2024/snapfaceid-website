@@ -1457,9 +1457,9 @@ Please respond immediately.`;
       {/* Modal: Alert Authorities */}
       {showAlertAuthoritiesModal && selectedAlert && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[9999] p-4">
-          <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-hidden">
-            {/* Header */}
-            <div className="bg-red-600 px-6 py-4 flex items-center justify-between">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[95vh] flex flex-col">
+            {/* Header - Fixed */}
+            <div className="bg-red-600 px-6 py-4 flex items-center justify-between flex-shrink-0">
               <div className="flex items-center gap-3">
                 <svg className="h-8 w-8 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
@@ -1476,8 +1476,8 @@ Please respond immediately.`;
               </button>
             </div>
 
-            {/* Content */}
-            <div className="p-6 overflow-y-auto max-h-[60vh]">
+            {/* Content - Scrollable */}
+            <div className="p-6 overflow-y-auto flex-1 min-h-0">
               {/* Emergency Info Summary with Photos */}
               <div className="grid grid-cols-2 gap-4 mb-6">
                 <div className="bg-purple-50 rounded-lg p-4">
@@ -1537,10 +1537,9 @@ Please respond immediately.`;
                   {generateEmergencyMessage()}
                 </div>
               </div>
-            </div>
 
-            {/* Actions */}
-            <div className="border-t bg-gray-50 px-6 py-4">
+              {/* Actions */}
+              <div className="border-t bg-gray-50 -mx-6 px-6 py-4 mt-4">
               {/* Two columns: Email and iMessage/SMS */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                 {/* Email Section */}
@@ -1678,6 +1677,7 @@ Please respond immediately.`;
               <p className="text-xs text-gray-500 text-center mt-3">
                 Call 911 directly for immediate emergency response
               </p>
+              </div>
             </div>
           </div>
         </div>
