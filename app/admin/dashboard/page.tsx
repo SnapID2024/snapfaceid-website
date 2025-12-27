@@ -1184,13 +1184,13 @@ Please respond immediately.`;
                 {/* Fecha de expiración */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Expiration Date & Time
+                    Expiration Date
                   </label>
                   <input
-                    type="datetime-local"
+                    type="date"
                     value={newMessageExpiry}
                     onChange={(e) => setNewMessageExpiry(e.target.value)}
-                    min={new Date().toISOString().slice(0, 16)}
+                    min={new Date().toISOString().slice(0, 10)}
                     className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#6A1B9A] focus:border-transparent"
                   />
                 </div>
@@ -1257,7 +1257,7 @@ Please respond immediately.`;
                             <div className="flex items-center gap-3 mt-2 text-sm text-gray-500">
                               <span className="bg-gray-100 px-2 py-0.5 rounded">{audienceLabel}</span>
                               <span>
-                                {isExpired ? '❌ Expired' : '✅ Active'} • Expires: {new Date(msg.expiresAt).toLocaleString()}
+                                {isExpired ? '❌ Expired' : '✅ Active'} • Expires: {msg.expiresAt}
                               </span>
                             </div>
                           </div>
