@@ -640,83 +640,47 @@ Please respond immediately.`;
       return;
     }
 
-    const { userName, userNickname, userPhone, userPhotoUrl, dateName, datePhone, datePhotoUrl, dateLocation, locationType, dateAddress, currentLocation, emergencyContactName, emergencyContactPhone, activatedAt, lastCheckIn, status } = selectedAlert;
+    const { userName, userNickname, userPhone, userPhotoUrl, dateName, datePhone, datePhotoUrl, dateLocation, locationType, dateAddress, currentLocation, emergencyContactName, emergencyContactPhone, lastCheckIn } = selectedAlert;
     const displayName = userNickname || userName;
-
-    const mapsLink = currentLocation && (currentLocation.latitude !== 0 || currentLocation.longitude !== 0)
-      ? `https://maps.google.com/?q=${currentLocation.latitude},${currentLocation.longitude}`
-      : '';
-
-    const statusText = status === 'emergency' ? 'EMERGENCY' : status === 'no_response' ? 'NO RESPONSE' : status.toUpperCase();
-
-    // Plantilla profesional para iMessage
-    const message = `━━━━━━━━━━━━━━━━━━━━
-🚨 ALERTA DE EMERGENCIA
-━━━━━━━━━━━━━━━━━━━━
-Estado: ${statusText}
-
-👤 USUARIO EN PELIGRO
-${displayName}
-Tel: ${userPhone}
-
-👥 EN CITA CON
-${dateName}
-Tel: ${datePhone}
-
-📍 UBICACIÓN
-${locationType || 'Lugar'}: ${dateAddress || dateLocation}
-${mapsLink ? `Maps: ${mapsLink}` : ''}
-
-⏰ Último check-in: ${new Date(lastCheckIn).toLocaleTimeString()}
-
-📞 Contacto de Emergencia
-${emergencyContactName || 'N/A'}: ${emergencyContactPhone || 'N/A'}
-━━━━━━━━━━━━━━━━━━━━
-SnapfaceID Guardian`;
 
     // Limpiar el número de teléfono (solo dígitos y +)
     const cleanPhone = smsRecipientPhone.replace(/[^\d+]/g, '');
 
+    // Formatear ubicación
+    const location = `${locationType || 'Location'}: ${dateAddress || dateLocation || 'N/A'}`;
+
     setSendingiMessage(true);
 
     try {
-      // Intentar enviar via servidor local (genera imagen con todo integrado)
-      const response = await fetch('http://localhost:3847/send-imessage', {
+      // Enviar MMS via Twilio con flyer generado
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'https://api.snapfaceid.com'}/admin/send-emergency-mms`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          phone: cleanPhone,
-          userPhotoUrl: userPhotoUrl || '',
-          datePhotoUrl: datePhotoUrl || '',
-          messageData: {
-            status: statusText,
-            userName: displayName,
-            userPhone: userPhone,
-            dateName: dateName,
-            datePhone: datePhone,
-            locationType: locationType || 'Location',
-            address: dateAddress || dateLocation,
-            dateLocation: dateLocation,
-            mapsLink: mapsLink,
-            lastCheckIn: new Date(lastCheckIn).toLocaleTimeString(),
-            emergencyContactName: emergencyContactName || 'N/A',
-            emergencyContactPhone: emergencyContactPhone || 'N/A',
-          },
+          alert_id: selectedAlert.id,
+          recipient_phone: cleanPhone,
+          date_photo_url: datePhotoUrl || '',
+          user_photo_url: userPhotoUrl || '',
+          date_phone: datePhone || '',
+          date_name: dateName || '',
+          user_name: displayName || '',
+          contact_name: emergencyContactName || '',
+          location: location,
+          last_check_time: lastCheckIn ? new Date(lastCheckIn).toLocaleTimeString() : 'N/A',
+          language: 'en',
         }),
       });
 
-      if (response.ok) {
-        alert('iMessage enviado exitosamente con fotos!');
+      const data = await response.json();
+
+      if (response.ok && data.success) {
+        alert('Emergency MMS sent successfully via Twilio!');
       } else {
-        const data = await response.json();
-        throw new Error(data.error || 'Error del servidor');
+        throw new Error(data.detail || data.message || 'Server error');
       }
     } catch (error) {
-      console.log('Servidor local no disponible, usando sms: URL scheme');
-      // Fallback: abrir app de Mensajes via sms: URL scheme (sin fotos)
-      const fullMessage = message + `\n\n📷 Photos:\n${userPhotoUrl || 'N/A'}\n${datePhotoUrl || 'N/A'}`;
-      const smsUrl = `sms:${cleanPhone}&body=${encodeURIComponent(fullMessage)}`;
-      window.open(smsUrl, '_self');
+      console.error('Error sending emergency MMS:', error);
+      alert(`Failed to send MMS: ${error instanceof Error ? error.message : 'Unknown error'}`);
     } finally {
       setSendingiMessage(false);
     }
@@ -731,56 +695,43 @@ SnapfaceID Guardian`;
       return;
     }
 
-    const { userName, userNickname, userPhone, userPhotoUrl, dateName, datePhone: dPhone, datePhotoUrl, dateLocation, locationType, dateAddress, currentLocation, emergencyContactName, emergencyContactPhone, lastCheckIn, status } = selectedAlert;
+    const { userName, userNickname, dateName, dateLocation, locationType, dateAddress } = selectedAlert;
     const displayName = userNickname || userName;
-
-    const mapsLink = currentLocation && (currentLocation.latitude !== 0 || currentLocation.longitude !== 0)
-      ? `https://maps.google.com/?q=${currentLocation.latitude},${currentLocation.longitude}`
-      : '';
-
-    const statusText = status === 'emergency' ? 'EMERGENCY' : status === 'no_response' ? 'NO RESPONSE' : status.toUpperCase();
 
     // Limpiar el número de teléfono ingresado
     const cleanPhone = suspectWarningPhone.replace(/[^\d+]/g, '');
 
+    // Formatear ubicación
+    const location = `${locationType || 'Location'}: ${dateAddress || dateLocation || 'N/A'}`;
+
     setSendingSuspectWarning(true);
 
     try {
-      const response = await fetch('http://localhost:3847/send-imessage', {
+      // Enviar advertencia SMS via Twilio
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'https://api.snapfaceid.com'}/admin/send-suspect-warning`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          phone: cleanPhone,
-          template: 'suspect',  // Usar plantilla de sospechoso
-          userPhotoUrl: userPhotoUrl || '',
-          datePhotoUrl: datePhotoUrl || '',
-          messageData: {
-            status: statusText,
-            userName: displayName,
-            userPhone: userPhone,
-            dateName: dateName,
-            datePhone: dPhone,
-            locationType: locationType || 'Location',
-            address: dateAddress || dateLocation,
-            dateLocation: dateLocation,
-            mapsLink: mapsLink,
-            lastCheckIn: new Date(lastCheckIn).toLocaleTimeString(),
-            emergencyContactName: emergencyContactName || 'N/A',
-            emergencyContactPhone: emergencyContactPhone || 'N/A',
-          },
+          alert_id: selectedAlert.id,
+          recipient_phone: cleanPhone,
+          user_name: displayName || '',
+          date_name: dateName || '',
+          location: location,
+          language: 'en',
         }),
       });
 
-      if (response.ok) {
-        alert(`Warning sent successfully to ${suspectWarningPhone}!`);
+      const data = await response.json();
+
+      if (response.ok && data.success) {
+        alert(`Warning SMS sent successfully to ${suspectWarningPhone} via Twilio!`);
         setSuspectWarningPhone('');
       } else {
-        const data = await response.json();
-        throw new Error(data.error || 'Server error');
+        throw new Error(data.detail || data.message || 'Server error');
       }
     } catch (error) {
       console.error('Error sending suspect warning:', error);
-      alert('Failed to send warning. Make sure the local server is running.');
+      alert(`Failed to send warning: ${error instanceof Error ? error.message : 'Unknown error'}`);
     } finally {
       setSendingSuspectWarning(false);
     }
@@ -1615,10 +1566,10 @@ SnapfaceID Guardian`;
                   </button>
                 </div>
 
-                {/* iMessage/SMS Section */}
+                {/* SMS/MMS Section via Twilio */}
                 <div className="bg-green-50 rounded-lg p-3">
                   <label className="block text-sm font-semibold text-green-700 mb-2">
-                    Send via iMessage/SMS (Mac)
+                    Send Emergency MMS via Twilio
                   </label>
                   <input
                     type="tel"
@@ -1643,18 +1594,18 @@ SnapfaceID Guardian`;
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
                       </svg>
                     )}
-                    {sendingiMessage ? 'Sending...' : 'Send iMessage + Photos'}
+                    {sendingiMessage ? 'Sending...' : 'Send SMS + Photo (Twilio)'}
                   </button>
                 </div>
               </div>
 
-              {/* Send Warning to Suspect/Date Section */}
+              {/* Send Warning to Suspect/Date Section via Twilio */}
               <div className="bg-orange-100 rounded-lg p-3 mb-4 border-2 border-orange-400">
                 <label className="block text-sm font-bold text-orange-800 mb-2">
-                  Send Warning to Suspect/Date
+                  Send Warning to Suspect/Date (Twilio SMS)
                 </label>
                 <p className="text-xs text-orange-700 mb-2">
-                  Send a warning message informing that police are on their way. Date phone: {selectedAlert.datePhone || 'N/A'}
+                  Send a warning SMS informing that authorities have been notified. Date phone: {selectedAlert.datePhone || 'N/A'}
                 </p>
                 <input
                   type="tel"
@@ -1679,7 +1630,7 @@ SnapfaceID Guardian`;
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
                     </svg>
                   )}
-                  {sendingSuspectWarning ? 'Sending...' : 'Send Warning'}
+                  {sendingSuspectWarning ? 'Sending...' : 'Send Warning SMS (Twilio)'}
                 </button>
               </div>
 
