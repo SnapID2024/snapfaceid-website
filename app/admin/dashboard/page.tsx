@@ -438,8 +438,54 @@ export default function AdminDashboard() {
     safe: alerts.filter((a) => a.status === 'safe').length,
   };
 
+  // Función para abrir modal de llamada con Twilio Voice
+  const openCallModal = (targetType: 'user' | 'date' | 'emergency_contact', phone: string, name: string) => {
+    setCallTargetType(targetType);
+    setCallTargetPhone(phone);
+    setCallTargetName(name);
+    setShowCallModal(true);
+  };
+
+  // Función legacy para llamar directamente desde el dispositivo
   const handleCallUser = (phone: string) => {
     window.open(`tel:${phone}`, '_self');
+  };
+
+  // Función para iniciar llamada con Twilio Voice
+  const handleTwilioCall = async () => {
+    if (!selectedAlert || !callTargetPhone) return;
+
+    setCallingInProgress(true);
+    try {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'https://api.snapfaceid.com'}/admin/call/initiate`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          alert_id: selectedAlert.id,
+          target_type: callTargetType,
+          target_phone: callTargetPhone,
+          target_name: callTargetName,
+          operator_phone: operatorPhone || undefined,
+        }),
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        alert(`✅ Call initiated successfully!\n\nTarget Call SID: ${result.target_call_sid}\n${result.operator_call_sid ? `Operator Call SID: ${result.operator_call_sid}` : ''}\nConference: ${result.conference_name}`);
+        setShowCallModal(false);
+        setOperatorPhone('');
+      } else {
+        const error = await response.json();
+        alert(`❌ Failed to initiate call: ${error.detail || 'Unknown error'}`);
+      }
+    } catch (error) {
+      console.error('Call error:', error);
+      alert(`❌ Error initiating call: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    } finally {
+      setCallingInProgress(false);
+    }
   };
 
   const handleSelectAlert = (alert: Alert) => {
@@ -580,6 +626,12 @@ Please respond immediately.`;
   const [sendingiMessage, setSendingiMessage] = useState(false);
   const [sendingSuspectWarning, setSendingSuspectWarning] = useState(false);
   const [suspectWarningPhone, setSuspectWarningPhone] = useState('');
+  const [callingInProgress, setCallingInProgress] = useState(false);
+  const [operatorPhone, setOperatorPhone] = useState('');
+  const [showCallModal, setShowCallModal] = useState(false);
+  const [callTargetType, setCallTargetType] = useState<'user' | 'date' | 'emergency_contact'>('user');
+  const [callTargetPhone, setCallTargetPhone] = useState('');
+  const [callTargetName, setCallTargetName] = useState('');
 
   const handleSendViaiMessage = async () => {
     if (!selectedAlert) return;
@@ -1355,7 +1407,7 @@ SnapfaceID Guardian`;
                         </div>
                         {selectedAlert.emergencyContactPhone && (
                           <button
-                            onClick={() => handleCallUser(selectedAlert.emergencyContactPhone!)}
+                            onClick={() => openCallModal('emergency_contact', selectedAlert.emergencyContactPhone!, selectedAlert.emergencyContactName || 'Emergency Contact')}
                             className="flex items-center gap-2 bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
                           >
                             <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -1372,7 +1424,7 @@ SnapfaceID Guardian`;
                 {/* Action Buttons */}
                 <div className="border-t pt-3 mt-1 flex flex-wrap gap-2">
                   <button
-                    onClick={() => handleCallUser(selectedAlert.userPhone)}
+                    onClick={() => openCallModal('user', selectedAlert.userPhone, selectedAlert.userNickname || selectedAlert.userName)}
                     className="flex items-center gap-2 bg-[#6A1B9A] hover:bg-[#8B4DAE] text-white px-4 py-2 rounded-lg font-medium transition-colors"
                   >
                     <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -1380,6 +1432,18 @@ SnapfaceID Guardian`;
                     </svg>
                     Call User
                   </button>
+
+                  {selectedAlert.datePhone && (
+                    <button
+                      onClick={() => openCallModal('date', selectedAlert.datePhone!, selectedAlert.dateName || 'Date')}
+                      className="flex items-center gap-2 bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg font-medium transition-colors"
+                    >
+                      <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+                      </svg>
+                      Call Date
+                    </button>
+                  )}
 
                   <button
                     onClick={() => setShowEmergencyContact(!showEmergencyContact)}
@@ -1654,6 +1718,101 @@ SnapfaceID Guardian`;
               <p className="text-xs text-gray-500 text-center mt-3">
                 Call 911 directly for immediate emergency response
               </p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal: Twilio Voice Call */}
+      {showCallModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[9999] p-4">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full overflow-hidden">
+            {/* Header */}
+            <div className="bg-[#6A1B9A] px-6 py-4 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <svg className="h-8 w-8 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+                </svg>
+                <h2 className="text-xl font-bold text-white">Initiate Call</h2>
+              </div>
+              <button
+                onClick={() => { setShowCallModal(false); setOperatorPhone(''); }}
+                className="text-white/80 hover:text-white"
+              >
+                <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            {/* Content */}
+            <div className="p-6">
+              <div className="bg-gray-50 rounded-lg p-4 mb-4">
+                <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">Calling</p>
+                <p className="font-bold text-gray-900 text-lg">{callTargetName}</p>
+                <p className="text-gray-600">{callTargetPhone}</p>
+                <span className={`inline-block mt-2 px-2 py-1 text-xs rounded-full ${
+                  callTargetType === 'user' ? 'bg-purple-100 text-purple-700' :
+                  callTargetType === 'date' ? 'bg-blue-100 text-blue-700' :
+                  'bg-orange-100 text-orange-700'
+                }`}>
+                  {callTargetType === 'user' ? 'User' : callTargetType === 'date' ? 'Date' : 'Emergency Contact'}
+                </span>
+              </div>
+
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Operator Phone (optional)
+                </label>
+                <input
+                  type="tel"
+                  value={operatorPhone}
+                  onChange={(e) => setOperatorPhone(e.target.value)}
+                  placeholder="+1 (555) 123-4567"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#6A1B9A] focus:border-transparent"
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  Enter your phone number to join the call and speak with the target
+                </p>
+              </div>
+
+              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 mb-4">
+                <p className="text-sm text-yellow-800">
+                  <strong>How it works:</strong> Twilio will call the target. If you provide your phone number,
+                  you will also receive a call and be connected to the same conference.
+                </p>
+              </div>
+
+              <div className="flex gap-3">
+                <button
+                  onClick={() => { setShowCallModal(false); setOperatorPhone(''); }}
+                  className="flex-1 px-4 py-3 border border-gray-300 rounded-lg text-gray-700 font-medium hover:bg-gray-50 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleTwilioCall}
+                  disabled={callingInProgress}
+                  className="flex-1 flex items-center justify-center gap-2 bg-[#6A1B9A] hover:bg-[#8B4DAE] text-white px-4 py-3 rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {callingInProgress ? (
+                    <>
+                      <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                      </svg>
+                      Calling...
+                    </>
+                  ) : (
+                    <>
+                      <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+                      </svg>
+                      Start Call
+                    </>
+                  )}
+                </button>
+              </div>
             </div>
           </div>
         </div>
