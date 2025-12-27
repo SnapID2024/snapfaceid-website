@@ -695,28 +695,37 @@ Please respond immediately.`;
       return;
     }
 
-    const { userName, userNickname, dateName, dateLocation, locationType, dateAddress } = selectedAlert;
+    const { userName, userNickname, userPhotoUrl, dateName, datePhone, datePhotoUrl, dateLocation, locationType, dateAddress, currentLocation, emergencyContactName, lastCheckIn } = selectedAlert;
     const displayName = userNickname || userName;
 
     // Limpiar el número de teléfono ingresado
     const cleanPhone = suspectWarningPhone.replace(/[^\d+]/g, '');
 
-    // Formatear ubicación
-    const location = `${locationType || 'Location'}: ${dateAddress || dateLocation || 'N/A'}`;
+    // Formatear ubicación de la cita
+    const meetingLocation = dateAddress || dateLocation || 'N/A';
 
     setSendingSuspectWarning(true);
 
     try {
-      // Enviar advertencia SMS via Twilio
+      // Enviar advertencia MMS via Twilio con flyer
       const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'https://api.snapfaceid.com'}/admin/send-suspect-warning`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           alert_id: selectedAlert.id,
           recipient_phone: cleanPhone,
-          user_name: displayName || '',
+          // For flyer generation
+          date_photo_url: datePhotoUrl || '',
+          user_photo_url: userPhotoUrl || '',
+          date_phone: datePhone || '',
           date_name: dateName || '',
-          location: location,
+          user_name: displayName || '',
+          contact_name: emergencyContactName || '',
+          // Location info
+          meeting_location: meetingLocation,
+          current_location_lat: currentLocation?.latitude || null,
+          current_location_lng: currentLocation?.longitude || null,
+          last_check_time: lastCheckIn ? new Date(lastCheckIn).toLocaleTimeString() : 'N/A',
           language: 'en',
         }),
       });
@@ -724,7 +733,7 @@ Please respond immediately.`;
       const data = await response.json();
 
       if (response.ok && data.success) {
-        alert(`Warning SMS sent successfully to ${suspectWarningPhone} via Twilio!`);
+        alert(`Warning MMS sent successfully to ${suspectWarningPhone} via Twilio!`);
         setSuspectWarningPhone('');
       } else {
         throw new Error(data.detail || data.message || 'Server error');
@@ -1599,13 +1608,13 @@ Please respond immediately.`;
                 </div>
               </div>
 
-              {/* Send Warning to Suspect/Date Section via Twilio */}
+              {/* Send Warning to Suspect/Date Section via Twilio MMS */}
               <div className="bg-orange-100 rounded-lg p-3 mb-4 border-2 border-orange-400">
                 <label className="block text-sm font-bold text-orange-800 mb-2">
-                  Send Warning to Suspect/Date (Twilio SMS)
+                  Send Warning to Suspect/Date (Twilio MMS)
                 </label>
                 <p className="text-xs text-orange-700 mb-2">
-                  Send a warning SMS informing that authorities have been notified. Date phone: {selectedAlert.datePhone || 'N/A'}
+                  Send warning MMS with flyer + 911 notification message. Date phone: {selectedAlert.datePhone || 'N/A'}
                 </p>
                 <input
                   type="tel"
@@ -1630,7 +1639,7 @@ Please respond immediately.`;
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
                     </svg>
                   )}
-                  {sendingSuspectWarning ? 'Sending...' : 'Send Warning SMS (Twilio)'}
+                  {sendingSuspectWarning ? 'Sending...' : 'Send Warning MMS + Flyer (Twilio)'}
                 </button>
               </div>
 
