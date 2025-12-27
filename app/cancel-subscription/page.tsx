@@ -294,6 +294,23 @@ export default function CancelSubscriptionPage() {
             <div>
               <h2 className="text-2xl font-bold text-gray-900 mb-6">Confirm Cancellation</h2>
 
+              {/* Tesla Model X Giveaway Warning */}
+              <div className="bg-red-50 border-2 border-red-300 rounded-lg p-6 mb-6">
+                <div className="flex items-start">
+                  <span className="text-3xl mr-3">🚗</span>
+                  <div>
+                    <h3 className="font-bold text-red-900 text-lg mb-2">WARNING: You will lose your Tesla Model X ticket!</h3>
+                    <p className="text-red-800 mb-3">
+                      As a Premium subscriber, you have an exclusive ticket to win a <strong>Tesla Model X</strong>!
+                      The draw will happen when we reach 30,000 Premium users.
+                    </p>
+                    <p className="text-red-800 font-semibold">
+                      If you cancel, your ticket will be permanently revoked and reassigned to another user.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
               <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6 mb-6">
                 <h3 className="font-bold text-yellow-900 mb-3">Before you cancel:</h3>
                 <ul className="space-y-2 text-yellow-800">
