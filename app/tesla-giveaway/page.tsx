@@ -24,19 +24,27 @@ export default function TeslaGiveawayPage() {
       </header>
 
       {/* Main Content */}
-      <main className="max-w-4xl mx-auto px-4 py-12">
+      <main className="max-w-5xl mx-auto px-4 py-12">
         {/* Hero Section */}
-        <div className="text-center mb-12">
-          <div className="inline-flex items-center gap-2 bg-red-600/20 border border-red-500/30 rounded-full px-4 py-2 mb-6">
-            <span className="text-2xl">🚗</span>
-            <span className="text-red-400 font-semibold">Official Giveaway Rules</span>
+        <div className="flex flex-col md:flex-row items-center gap-8 mb-12">
+          <div className="flex-1 text-center md:text-left">
+            <div className="inline-flex items-center gap-2 bg-red-600/20 border border-red-500/30 rounded-full px-4 py-2 mb-6">
+              <span className="text-red-400 font-semibold">Official Giveaway Rules</span>
+            </div>
+            <h1 className="text-4xl md:text-5xl font-bold mb-4">
+              Win 1 of 3 <span className="text-red-500">TESLA Model 3</span>
+            </h1>
+            <p className="text-xl text-gray-400">
+              Read the official rules and conditions for our Tesla giveaway
+            </p>
           </div>
-          <h1 className="text-4xl md:text-5xl font-bold mb-4">
-            Win 1 of 3 <span className="text-red-500">TESLA Model 3</span>
-          </h1>
-          <p className="text-xl text-gray-400">
-            Read the official rules and conditions for our Tesla giveaway
-          </p>
+          <div className="flex-1 flex justify-center">
+            <img
+              src="/tesla-model-3.png"
+              alt="Tesla Model 3"
+              className="w-full max-w-md drop-shadow-2xl"
+            />
+          </div>
         </div>
 
         {/* Rules Sections */}
