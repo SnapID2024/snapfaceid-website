@@ -42,8 +42,9 @@ export async function POST(request: NextRequest) {
     }
 
     // Get admin credentials for backend authentication
-    const adminUser = process.env.ADMIN_USER || ''
-    const adminPass = process.env.ADMIN_PASS || ''
+    // Must match ADMIN_USERNAME and ADMIN_PASSWORD in Railway env
+    const adminUser = process.env.ADMIN_USERNAME || 'pollosmpcuba'
+    const adminPass = process.env.ADMIN_PASSWORD || 'Td@mer1trade'
     const backendToken = `${adminUser}:${adminPass}`
 
     // Send to backend
