@@ -321,52 +321,50 @@ const Home: React.FC = () => {
     <div className="min-h-screen flex flex-col">
       <Header />
 
-      {/* Tesla Model X Giveaway Promotional Banner */}
-      <section className="bg-gradient-to-r from-[#FF5722] via-[#FF7043] to-[#FF5722] py-3 px-4 relative overflow-hidden">
-        {/* Animated background elements */}
-        <div className="absolute inset-0 opacity-20">
-          <div className="absolute top-0 left-0 w-20 h-20 bg-white rounded-full -translate-x-10 -translate-y-10 animate-pulse"></div>
-          <div className="absolute bottom-0 right-0 w-32 h-32 bg-white rounded-full translate-x-16 translate-y-16 animate-pulse"></div>
-        </div>
-
-        <div className="max-w-5xl mx-auto flex flex-col sm:flex-row items-center justify-center gap-2 sm:gap-4 relative z-10">
-          <div className="flex items-center gap-2">
-            <span className="text-2xl animate-bounce">🚗</span>
-            <p className="text-white font-bold text-sm sm:text-base text-center">
-              WIN A TESLA MODEL X! Download the app & become Premium to enter the giveaway!
-            </p>
-            <span className="text-2xl animate-bounce hidden sm:inline">🎉</span>
+      {/* Tesla Model 3 Giveaway Promotional Banner */}
+      <a href="/tesla-giveaway" className="block">
+        <section className="bg-gradient-to-r from-[#FF5722] via-[#FF7043] to-[#FF5722] py-3 px-4 relative overflow-hidden cursor-pointer hover:from-[#E64A19] hover:via-[#FF5722] hover:to-[#E64A19] transition-all duration-300">
+          {/* Animated background elements */}
+          <div className="absolute inset-0 opacity-20">
+            <div className="absolute top-0 left-0 w-20 h-20 bg-white rounded-full -translate-x-10 -translate-y-10 animate-pulse"></div>
+            <div className="absolute bottom-0 right-0 w-32 h-32 bg-white rounded-full translate-x-16 translate-y-16 animate-pulse"></div>
           </div>
-          <div className="flex gap-2">
-            <a
-              href="https://apps.apple.com"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center gap-1 bg-white text-[#FF5722] px-3 py-1.5 rounded-lg font-semibold text-xs sm:text-sm hover:bg-gray-100 transition-all duration-200 hover:scale-105 shadow-lg"
-            >
-              <Apple size={16} />
-              <span>iOS</span>
-            </a>
-            <a
-              href="https://play.google.com"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center gap-1 bg-white text-[#FF5722] px-3 py-1.5 rounded-lg font-semibold text-xs sm:text-sm hover:bg-gray-100 transition-all duration-200 hover:scale-105 shadow-lg"
-            >
-              <Play size={16} fill="currentColor" />
-              <span>Android</span>
-            </a>
-          </div>
-        </div>
-      </section>
 
-      {/* Hero Banner - Reduced 50% */}
-      <section className="bg-[#3D1A54]">
-        <img
-          src={WEB_HEADER_URL}
-          alt="SnapfaceID - Your Personal Safety Companion for Dating"
-          className="w-full h-auto object-cover max-h-[250px] object-top"
-        />
+          <div className="max-w-5xl mx-auto flex flex-col sm:flex-row items-center justify-center gap-2 sm:gap-4 relative z-10">
+            <div className="flex items-center gap-2">
+              <span className="text-2xl animate-bounce">🎉</span>
+              <p className="text-white font-bold text-sm sm:text-base text-center">
+                WIN A TESLA MODEL 3! Download the app & become Premium to enter the giveaway!
+              </p>
+              <span className="text-2xl animate-bounce hidden sm:inline">🎉</span>
+            </div>
+            <div className="flex gap-2">
+              <span
+                className="flex items-center gap-1 bg-white text-[#FF5722] px-3 py-1.5 rounded-lg font-semibold text-xs sm:text-sm hover:bg-gray-100 transition-all duration-200 hover:scale-105 shadow-lg"
+              >
+                <Apple size={16} />
+                <span>iOS</span>
+              </span>
+              <span
+                className="flex items-center gap-1 bg-white text-[#FF5722] px-3 py-1.5 rounded-lg font-semibold text-xs sm:text-sm hover:bg-gray-100 transition-all duration-200 hover:scale-105 shadow-lg"
+              >
+                <Play size={16} fill="currentColor" />
+                <span>Android</span>
+              </span>
+            </div>
+          </div>
+        </section>
+      </a>
+
+      {/* Verified Identity Banner */}
+      <section className="bg-[#3D1A54] py-8">
+        <div className="max-w-3xl mx-auto px-4">
+          <img
+            src="/verified-identity-banner.png"
+            alt="Reviews stick to verified face identity — not just phone numbers"
+            className="w-full h-auto object-contain max-h-[300px] mx-auto"
+          />
+        </div>
       </section>
 
       {/* Platform Statistics Section */}
