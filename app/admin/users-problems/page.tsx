@@ -1,10 +1,11 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 
 const LOGO_URL = 'https://d64gsuwffb70l.cloudfront.net/6834a8f25630f332851529fb_1765418801539_cd77434c.png';
+const REFRESH_INTERVAL = 30000; // 30 segundos
 
 interface LogoutUser {
   id: string;
@@ -40,37 +41,51 @@ interface InactiveUser {
   daysInactive: number;
 }
 
+interface EmergencyExit {
+  id: string;
+  historyId: string;
+  userId: string;
+  userName: string;
+  userNickname: string;
+  userPhone: string;
+  dateName: string;
+  datePhone: string;
+  locationType: string;
+  address: string;
+  emergencyContactName: string;
+  emergencyContactPhone: string;
+  startedAt: string | null;
+  endedAt: string | null;
+  endedAtUnix: number;
+  endStatus: 'emergency' | 'safe';
+  badgeType: 'emergency_exit' | 'safe_by_contact';
+}
+
 interface ProblemUsersData {
   logoutUsers: LogoutUser[];
   downgradedUsers: DowngradedUser[];
   inactiveUsers: InactiveUser[];
+  emergencyExits: EmergencyExit[];
   stats: {
     totalLogouts: number;
     totalDowngrades: number;
     totalInactive: number;
+    totalEmergencyExits: number;
   };
 }
 
-type TabType = 'logout' | 'downgraded' | 'inactive';
+type TabType = 'emergency' | 'logout' | 'downgraded' | 'inactive';
 
 export default function UsersProblemsPage() {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [data, setData] = useState<ProblemUsersData | null>(null);
-  const [activeTab, setActiveTab] = useState<TabType>('logout');
+  const [activeTab, setActiveTab] = useState<TabType>('emergency');
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
 
-  useEffect(() => {
-    const token = localStorage.getItem('adminToken');
-    if (!token) {
-      router.push('/admin');
-      return;
-    }
-    fetchData(token);
-  }, [router]);
-
-  const fetchData = async (token: string) => {
-    setIsLoading(true);
+  const fetchData = useCallback(async (token: string, showLoading = true) => {
+    if (showLoading) setIsLoading(true);
     setError(null);
     try {
       const response = await fetch('/api/admin/users-problems', {
@@ -90,12 +105,32 @@ export default function UsersProblemsPage() {
 
       const result = await response.json();
       setData(result);
+      setLastUpdated(new Date());
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Error fetching data');
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [router]);
+
+  useEffect(() => {
+    const token = localStorage.getItem('adminToken');
+    if (!token) {
+      router.push('/admin');
+      return;
+    }
+    fetchData(token);
+
+    // Auto-refresh cada 30 segundos
+    const interval = setInterval(() => {
+      const currentToken = localStorage.getItem('adminToken');
+      if (currentToken) {
+        fetchData(currentToken, false); // No mostrar loading en refresh
+      }
+    }, REFRESH_INTERVAL);
+
+    return () => clearInterval(interval);
+  }, [router, fetchData]);
 
   const formatDate = (dateStr: string | null) => {
     if (!dateStr) return 'Never';
@@ -135,6 +170,21 @@ export default function UsersProblemsPage() {
     );
   };
 
+  const getEmergencyBadge = (badgeType: 'emergency_exit' | 'safe_by_contact') => {
+    if (badgeType === 'emergency_exit') {
+      return (
+        <span className="px-3 py-1 rounded-full text-xs font-bold bg-red-600 text-white animate-pulse">
+          Emergency Exit
+        </span>
+      );
+    }
+    return (
+      <span className="px-3 py-1 rounded-full text-xs font-medium bg-gray-400 text-white">
+        Safe by Emergency Contact
+      </span>
+    );
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
       {/* Header */}
@@ -145,16 +195,27 @@ export default function UsersProblemsPage() {
               <img src={LOGO_URL} alt="SnapFace ID" className="h-10" />
               <div className="h-6 w-px bg-gray-300" />
               <h1 className="text-xl font-semibold text-gray-900">Problemas/Users</h1>
+              {lastUpdated && (
+                <span className="text-xs text-gray-500 ml-2">
+                  Updated: {lastUpdated.toLocaleTimeString()}
+                </span>
+              )}
             </div>
-            <Link
-              href="/admin/dashboard"
-              className="flex items-center gap-2 text-gray-600 hover:text-gray-900 transition-colors"
-            >
-              <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-              </svg>
-              Back to Dashboard
-            </Link>
+            <div className="flex items-center gap-4">
+              <div className="flex items-center gap-2 text-sm text-gray-500">
+                <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
+                Auto-refresh: 30s
+              </div>
+              <Link
+                href="/admin/dashboard"
+                className="flex items-center gap-2 text-gray-600 hover:text-gray-900 transition-colors"
+              >
+                <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                </svg>
+                Back to Dashboard
+              </Link>
+            </div>
           </div>
         </div>
       </div>
@@ -162,7 +223,20 @@ export default function UsersProblemsPage() {
       {/* Stats Cards */}
       {data && (
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-200">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-red-100 rounded-lg">
+                  <svg className="h-6 w-6 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                  </svg>
+                </div>
+                <div>
+                  <p className="text-2xl font-bold text-gray-900">{data.stats.totalEmergencyExits}</p>
+                  <p className="text-sm text-gray-500">Emergency Exits</p>
+                </div>
+              </div>
+            </div>
             <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-200">
               <div className="flex items-center gap-3">
                 <div className="p-2 bg-blue-100 rounded-lg">
@@ -208,10 +282,25 @@ export default function UsersProblemsPage() {
 
       {/* Tabs */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex gap-2 border-b border-gray-200 pb-2">
+        <div className="flex gap-2 border-b border-gray-200 pb-2 overflow-x-auto">
+          <button
+            onClick={() => setActiveTab('emergency')}
+            className={`px-4 py-2 rounded-t-lg font-medium text-sm transition-colors whitespace-nowrap ${
+              activeTab === 'emergency'
+                ? 'bg-red-600 text-white'
+                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+            }`}
+          >
+            <span className="flex items-center gap-2">
+              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+              </svg>
+              Emergency Exits
+            </span>
+          </button>
           <button
             onClick={() => setActiveTab('logout')}
-            className={`px-4 py-2 rounded-t-lg font-medium text-sm transition-colors ${
+            className={`px-4 py-2 rounded-t-lg font-medium text-sm transition-colors whitespace-nowrap ${
               activeTab === 'logout'
                 ? 'bg-blue-600 text-white'
                 : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
@@ -226,7 +315,7 @@ export default function UsersProblemsPage() {
           </button>
           <button
             onClick={() => setActiveTab('downgraded')}
-            className={`px-4 py-2 rounded-t-lg font-medium text-sm transition-colors ${
+            className={`px-4 py-2 rounded-t-lg font-medium text-sm transition-colors whitespace-nowrap ${
               activeTab === 'downgraded'
                 ? 'bg-orange-600 text-white'
                 : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
@@ -241,7 +330,7 @@ export default function UsersProblemsPage() {
           </button>
           <button
             onClick={() => setActiveTab('inactive')}
-            className={`px-4 py-2 rounded-t-lg font-medium text-sm transition-colors ${
+            className={`px-4 py-2 rounded-t-lg font-medium text-sm transition-colors whitespace-nowrap ${
               activeTab === 'inactive'
                 ? 'bg-gray-600 text-white'
                 : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
@@ -280,6 +369,74 @@ export default function UsersProblemsPage() {
             >
               Retry
             </button>
+          </div>
+        )}
+
+        {/* Emergency Exits Tab */}
+        {!isLoading && !error && data && activeTab === 'emergency' && (
+          <div className="bg-white rounded-xl shadow-sm overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead className="bg-gray-50 border-b">
+                  <tr>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Status</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">User</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Phone</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Date Name</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Location</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Emergency Contact</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Ended At</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {data.emergencyExits.length === 0 ? (
+                    <tr>
+                      <td colSpan={7} className="px-4 py-8 text-center text-gray-500">
+                        No emergency exits recorded
+                      </td>
+                    </tr>
+                  ) : (
+                    data.emergencyExits.map((exit) => (
+                      <tr key={exit.id} className={`hover:bg-gray-50 ${exit.badgeType === 'emergency_exit' ? 'bg-red-50' : ''}`}>
+                        <td className="px-4 py-3">{getEmergencyBadge(exit.badgeType)}</td>
+                        <td className="px-4 py-3">
+                          <div>
+                            <span className="font-medium text-gray-900">{exit.userNickname || exit.userName}</span>
+                            {exit.userNickname && exit.userName && exit.userNickname !== exit.userName && (
+                              <span className="text-xs text-gray-500 ml-1">({exit.userName})</span>
+                            )}
+                          </div>
+                        </td>
+                        <td className="px-4 py-3 text-sm text-gray-600">{exit.userPhone}</td>
+                        <td className="px-4 py-3">
+                          <div>
+                            <span className="text-sm text-gray-900">{exit.dateName}</span>
+                            {exit.datePhone && (
+                              <div className="text-xs text-gray-500">{exit.datePhone}</div>
+                            )}
+                          </div>
+                        </td>
+                        <td className="px-4 py-3 text-sm text-gray-600">
+                          <div>
+                            {exit.locationType && <span className="font-medium">{exit.locationType}</span>}
+                            {exit.address && <div className="text-xs text-gray-500 truncate max-w-[200px]">{exit.address}</div>}
+                          </div>
+                        </td>
+                        <td className="px-4 py-3 text-sm text-gray-600">
+                          <div>
+                            {exit.emergencyContactName && <span>{exit.emergencyContactName}</span>}
+                            {exit.emergencyContactPhone && (
+                              <div className="text-xs text-gray-500">{exit.emergencyContactPhone}</div>
+                            )}
+                          </div>
+                        </td>
+                        <td className="px-4 py-3 text-sm text-gray-600">{formatDate(exit.endedAt)}</td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
           </div>
         )}
 
