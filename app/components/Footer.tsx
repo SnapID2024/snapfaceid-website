@@ -92,6 +92,11 @@ const Footer: React.FC<FooterProps> = ({ simplified = false }) => {
                   Terms of Service
                 </Link>
               </li>
+              <li>
+                <Link href="/tesla-giveaway" className="text-gray-400 hover:text-white transition-colors flex items-center gap-1">
+                  <span>🚗</span> Tesla Giveaway Rules
+                </Link>
+              </li>
             </ul>
           </div>
 
