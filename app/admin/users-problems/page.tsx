@@ -30,6 +30,18 @@ interface DowngradedUser {
   reason: string;
 }
 
+interface UpgradedUser {
+  id: string;
+  userId: string;
+  phone: string;
+  nickname: string;
+  previousStatus: string;
+  newStatus: string;
+  upgradedAt: string;
+  upgradedAtUnix: number;
+  reason: string;
+}
+
 interface InactiveUser {
   id: string;
   userId: string;
@@ -64,17 +76,19 @@ interface EmergencyExit {
 interface ProblemUsersData {
   logoutUsers: LogoutUser[];
   downgradedUsers: DowngradedUser[];
+  upgradedUsers: UpgradedUser[];
   inactiveUsers: InactiveUser[];
   emergencyExits: EmergencyExit[];
   stats: {
     totalLogouts: number;
     totalDowngrades: number;
+    totalUpgrades: number;
     totalInactive: number;
     totalEmergencyExits: number;
   };
 }
 
-type TabType = 'emergency' | 'logout' | 'downgraded' | 'inactive';
+type TabType = 'emergency' | 'upgraded' | 'logout' | 'downgraded' | 'inactive';
 
 export default function UsersProblemsPage() {
   const router = useRouter();
@@ -252,6 +266,19 @@ export default function UsersProblemsPage() {
             </div>
             <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-200">
               <div className="flex items-center gap-3">
+                <div className="p-2 bg-green-100 rounded-lg">
+                  <svg className="h-6 w-6 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+                  </svg>
+                </div>
+                <div>
+                  <p className="text-2xl font-bold text-gray-900">{data.stats.totalUpgrades}</p>
+                  <p className="text-sm text-gray-500">Upgrades</p>
+                </div>
+              </div>
+            </div>
+            <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-200">
+              <div className="flex items-center gap-3">
                 <div className="p-2 bg-orange-100 rounded-lg">
                   <svg className="h-6 w-6 text-orange-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 17h8m0 0V9m0 8l-8-8-4 4-6-6" />
@@ -296,6 +323,21 @@ export default function UsersProblemsPage() {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
               </svg>
               Emergency Exits
+            </span>
+          </button>
+          <button
+            onClick={() => setActiveTab('upgraded')}
+            className={`px-4 py-2 rounded-t-lg font-medium text-sm transition-colors whitespace-nowrap ${
+              activeTab === 'upgraded'
+                ? 'bg-green-600 text-white'
+                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+            }`}
+          >
+            <span className="flex items-center gap-2">
+              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+              </svg>
+              Upgrades
             </span>
           </button>
           <button
@@ -431,6 +473,54 @@ export default function UsersProblemsPage() {
                           </div>
                         </td>
                         <td className="px-4 py-3 text-sm text-gray-600">{formatDate(exit.endedAt)}</td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+
+        {/* Upgraded Users Tab */}
+        {!isLoading && !error && data && activeTab === 'upgraded' && (
+          <div className="bg-white rounded-xl shadow-sm overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead className="bg-gray-50 border-b">
+                  <tr>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">User</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Phone</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Previous</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Current</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Date</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {data.upgradedUsers.length === 0 ? (
+                    <tr>
+                      <td colSpan={5} className="px-4 py-8 text-center text-gray-500">
+                        No subscription upgrades recorded
+                      </td>
+                    </tr>
+                  ) : (
+                    data.upgradedUsers.map((user) => (
+                      <tr key={user.id} className="hover:bg-gray-50">
+                        <td className="px-4 py-3">
+                          <span className="font-medium text-gray-900">{user.nickname}</span>
+                        </td>
+                        <td className="px-4 py-3 text-sm text-gray-600">{user.phone}</td>
+                        <td className="px-4 py-3">
+                          <span className="px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-700">
+                            {user.previousStatus}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3">
+                          <span className="px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-700">
+                            {user.newStatus}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 text-sm text-gray-600">{formatDate(user.upgradedAt)}</td>
                       </tr>
                     ))
                   )}
