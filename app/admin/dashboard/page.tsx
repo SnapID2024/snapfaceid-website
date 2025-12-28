@@ -271,6 +271,19 @@ export default function AdminDashboard() {
   const [verifyingPhone, setVerifyingPhone] = useState(false);
   const [sendingPush, setSendingPush] = useState(false);
 
+  // Estados para Bulk Push Notifications
+  const [pushMode, setPushMode] = useState<'individual' | 'bulk'>('individual');
+  const [bulkTitle, setBulkTitle] = useState('');
+  const [bulkMessage, setBulkMessage] = useState('');
+  const [bulkTarget, setBulkTarget] = useState<'all' | 'premium' | 'free'>('all');
+  const [sendingBulkPush, setSendingBulkPush] = useState(false);
+  const [bulkPushResult, setBulkPushResult] = useState<{
+    sent: number;
+    failed: number;
+    skippedNoToken: number;
+    total: number;
+  } | null>(null);
+
   // Lista de países con banderas y códigos
   const countryCodes = [
     { code: '+1', flag: '🇺🇸', name: 'USA' },
@@ -678,6 +691,52 @@ export default function AdminDashboard() {
       alert('Network error sending push notification');
     } finally {
       setSendingPush(false);
+    }
+  };
+
+  const handleSendBulkPush = async () => {
+    if (!bulkTitle || !bulkMessage) return;
+
+    const token = localStorage.getItem('adminToken');
+    if (!token) return;
+
+    // Confirmar antes de enviar
+    const targetText = bulkTarget === 'all' ? 'ALL users' : bulkTarget === 'premium' ? 'Premium users only' : 'Free users only';
+    const confirmed = window.confirm(`Are you sure you want to send this notification to ${targetText}?\n\nTitle: ${bulkTitle}\nMessage: ${bulkMessage}`);
+    if (!confirmed) return;
+
+    setSendingBulkPush(true);
+    setBulkPushResult(null);
+
+    try {
+      const response = await fetch('/api/admin/push/send-bulk', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          title: bulkTitle,
+          message: bulkMessage,
+          target: bulkTarget,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok && data.success) {
+        setBulkPushResult(data.stats);
+        // Reset form
+        setBulkTitle('');
+        setBulkMessage('');
+      } else {
+        alert(`Error: ${data.error || 'Failed to send bulk push notification'}`);
+      }
+    } catch (err) {
+      console.error('Error sending bulk push:', err);
+      alert('Network error sending bulk push notification');
+    } finally {
+      setSendingBulkPush(false);
     }
   };
 
@@ -1455,165 +1514,310 @@ Please respond immediately.`;
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
                   </svg>
                 </button>
-                <h2 className="font-semibold text-gray-900 text-lg">Push Notifications - Send to Individual User</h2>
+                <h2 className="font-semibold text-gray-900 text-lg">Push Notifications</h2>
               </div>
+            </div>
+
+            {/* Mode Selector */}
+            <div className="flex gap-2">
+              <button
+                onClick={() => { setPushMode('individual'); setBulkPushResult(null); }}
+                className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+                  pushMode === 'individual'
+                    ? 'bg-[#6A1B9A] text-white'
+                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                }`}
+              >
+                Individual User
+              </button>
+              <button
+                onClick={() => { setPushMode('bulk'); setPushUserInfo(null); }}
+                className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+                  pushMode === 'bulk'
+                    ? 'bg-[#6A1B9A] text-white'
+                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                }`}
+              >
+                All Users (Bulk)
+              </button>
             </div>
 
             {/* Form para enviar push notification */}
             <div className="bg-white rounded-xl shadow-sm p-6">
-              <h3 className="font-semibold text-gray-900 mb-4">Send Push Notification</h3>
+              <h3 className="font-semibold text-gray-900 mb-4">
+                {pushMode === 'individual' ? 'Send to Individual User' : 'Send to All Users'}
+              </h3>
 
-              <div className="space-y-5">
-                {/* Selector de País y Teléfono */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Select Country & Phone Number
-                  </label>
-                  <div className="flex gap-2">
-                    {/* Selector de país con bandera */}
-                    <select
-                      value={pushCountryCode}
-                      onChange={(e) => {
-                        setPushCountryCode(e.target.value);
-                        setPushUserInfo(null);
-                      }}
-                      className="px-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#6A1B9A] focus:border-transparent bg-white text-lg"
-                    >
-                      {countryCodes.map((country, idx) => (
-                        <option key={`${country.code}-${idx}`} value={country.code}>
-                          {country.flag} {country.code} {country.name}
-                        </option>
-                      ))}
-                    </select>
-                    {/* Input de teléfono */}
-                    <input
-                      type="tel"
-                      value={pushPhone}
-                      onChange={(e) => {
-                        setPushPhone(e.target.value);
-                        setPushUserInfo(null);
-                      }}
-                      placeholder="786 449 0937"
-                      className="flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#6A1B9A] focus:border-transparent"
-                    />
-                    {/* Botón Verify */}
-                    <button
-                      onClick={handleVerifyPhone}
-                      disabled={!pushPhone.trim() || verifyingPhone}
-                      className="px-6 py-3 bg-[#6A1B9A] hover:bg-[#8B4DAE] text-white rounded-lg font-medium transition-colors disabled:opacity-50 flex items-center gap-2"
-                    >
-                      {verifyingPhone ? (
-                        <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                      ) : (
-                        <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                        </svg>
-                      )}
-                      Verify
-                    </button>
-                  </div>
-                </div>
-
-                {/* Resultado de verificación */}
-                {pushUserInfo && (
-                  <div className={`p-4 rounded-lg border ${
-                    pushUserInfo.found && pushUserInfo.canSendPush
-                      ? 'bg-green-50 border-green-200'
-                      : pushUserInfo.found
-                        ? 'bg-yellow-50 border-yellow-200'
-                        : 'bg-red-50 border-red-200'
-                  }`}>
-                    {pushUserInfo.found ? (
-                      <div className="space-y-2">
-                        <div className="flex items-center gap-2">
-                          <svg className={`h-5 w-5 ${pushUserInfo.canSendPush ? 'text-green-500' : 'text-yellow-500'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={pushUserInfo.canSendPush ? "M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" : "M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"} />
+              {pushMode === 'individual' ? (
+                <div className="space-y-5">
+                  {/* Selector de País y Teléfono */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Select Country & Phone Number
+                    </label>
+                    <div className="flex gap-2">
+                      {/* Selector de país con bandera */}
+                      <select
+                        value={pushCountryCode}
+                        onChange={(e) => {
+                          setPushCountryCode(e.target.value);
+                          setPushUserInfo(null);
+                        }}
+                        className="px-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#6A1B9A] focus:border-transparent bg-white text-lg"
+                      >
+                        {countryCodes.map((country, idx) => (
+                          <option key={`${country.code}-${idx}`} value={country.code}>
+                            {country.flag} {country.code} {country.name}
+                          </option>
+                        ))}
+                      </select>
+                      {/* Input de teléfono */}
+                      <input
+                        type="tel"
+                        value={pushPhone}
+                        onChange={(e) => {
+                          setPushPhone(e.target.value);
+                          setPushUserInfo(null);
+                        }}
+                        placeholder="786 449 0937"
+                        className="flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#6A1B9A] focus:border-transparent"
+                      />
+                      {/* Botón Verify */}
+                      <button
+                        onClick={handleVerifyPhone}
+                        disabled={!pushPhone.trim() || verifyingPhone}
+                        className="px-6 py-3 bg-[#6A1B9A] hover:bg-[#8B4DAE] text-white rounded-lg font-medium transition-colors disabled:opacity-50 flex items-center gap-2"
+                      >
+                        {verifyingPhone ? (
+                          <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                        ) : (
+                          <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                           </svg>
-                          <span className="font-semibold text-gray-900">{pushUserInfo.userName}</span>
-                          <span className={`px-2 py-0.5 rounded text-xs ${
-                            pushUserInfo.subscriptionStatus === 'active' ? 'bg-purple-100 text-purple-700' : 'bg-gray-100 text-gray-600'
-                          }`}>
-                            {pushUserInfo.subscriptionStatus === 'active' ? 'Premium' : 'Free'}
-                          </span>
-                        </div>
-                        {pushUserInfo.userEmail && (
-                          <p className="text-sm text-gray-600">{pushUserInfo.userEmail}</p>
                         )}
-                        <p className={`text-sm ${pushUserInfo.canSendPush ? 'text-green-700' : 'text-yellow-700'}`}>
-                          {pushUserInfo.canSendPush
-                            ? '✅ User can receive push notifications'
-                            : '⚠️ ' + (pushUserInfo.message || 'User cannot receive push notifications')}
-                        </p>
-                      </div>
-                    ) : (
-                      <div className="flex items-center gap-2">
-                        <svg className="h-5 w-5 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                        </svg>
-                        <span className="text-red-700">{pushUserInfo.message || 'User not found with this phone number'}</span>
-                      </div>
-                    )}
+                        Verify
+                      </button>
+                    </div>
                   </div>
-                )}
 
-                {/* Separador */}
-                <div className="border-t border-gray-200 pt-4">
-                  <h4 className="font-medium text-gray-900 mb-3">Notification Content</h4>
-                </div>
-
-                {/* Título - siempre visible */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Notification Title
-                  </label>
-                  <input
-                    type="text"
-                    value={pushTitle}
-                    onChange={(e) => setPushTitle(e.target.value)}
-                    placeholder="Enter notification title..."
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#6A1B9A] focus:border-transparent"
-                  />
-                </div>
-
-                {/* Mensaje - siempre visible */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Notification Message
-                  </label>
-                  <textarea
-                    value={pushMessage}
-                    onChange={(e) => setPushMessage(e.target.value)}
-                    placeholder="Write your push notification message here..."
-                    rows={5}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#6A1B9A] focus:border-transparent resize-none"
-                  />
-                  <p className="text-xs text-gray-500 mt-1">{pushMessage.length} characters</p>
-                </div>
-
-                {/* Botón enviar */}
-                <button
-                  onClick={handleSendPush}
-                  disabled={!pushUserInfo?.canSendPush || !pushTitle.trim() || !pushMessage.trim() || sendingPush}
-                  className="w-full bg-[#6A1B9A] hover:bg-[#8B4DAE] text-white py-4 rounded-lg font-semibold text-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-3"
-                >
-                  {sendingPush ? (
-                    <>
-                      <svg className="animate-spin h-6 w-6" viewBox="0 0 24 24">
-                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                      </svg>
-                      Sending...
-                    </>
-                  ) : (
-                    <>
-                      <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
-                      </svg>
-                      Send Push Notification
-                    </>
+                  {/* Resultado de verificación */}
+                  {pushUserInfo && (
+                    <div className={`p-4 rounded-lg border ${
+                      pushUserInfo.found && pushUserInfo.canSendPush
+                        ? 'bg-green-50 border-green-200'
+                        : pushUserInfo.found
+                          ? 'bg-yellow-50 border-yellow-200'
+                          : 'bg-red-50 border-red-200'
+                    }`}>
+                      {pushUserInfo.found ? (
+                        <div className="space-y-2">
+                          <div className="flex items-center gap-2">
+                            <svg className={`h-5 w-5 ${pushUserInfo.canSendPush ? 'text-green-500' : 'text-yellow-500'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={pushUserInfo.canSendPush ? "M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" : "M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"} />
+                            </svg>
+                            <span className="font-semibold text-gray-900">{pushUserInfo.userName}</span>
+                            <span className={`px-2 py-0.5 rounded text-xs ${
+                              pushUserInfo.subscriptionStatus === 'active' ? 'bg-purple-100 text-purple-700' : 'bg-gray-100 text-gray-600'
+                            }`}>
+                              {pushUserInfo.subscriptionStatus === 'active' ? 'Premium' : 'Free'}
+                            </span>
+                          </div>
+                          {pushUserInfo.userEmail && (
+                            <p className="text-sm text-gray-600">{pushUserInfo.userEmail}</p>
+                          )}
+                          <p className={`text-sm ${pushUserInfo.canSendPush ? 'text-green-700' : 'text-yellow-700'}`}>
+                            {pushUserInfo.canSendPush
+                              ? '✅ User can receive push notifications'
+                              : '⚠️ ' + (pushUserInfo.message || 'User cannot receive push notifications')}
+                          </p>
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-2">
+                          <svg className="h-5 w-5 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                          </svg>
+                          <span className="text-red-700">{pushUserInfo.message || 'User not found with this phone number'}</span>
+                        </div>
+                      )}
+                    </div>
                   )}
-                </button>
-              </div>
+
+                  {/* Separador */}
+                  <div className="border-t border-gray-200 pt-4">
+                    <h4 className="font-medium text-gray-900 mb-3">Notification Content</h4>
+                  </div>
+
+                  {/* Título */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Notification Title
+                    </label>
+                    <input
+                      type="text"
+                      value={pushTitle}
+                      onChange={(e) => setPushTitle(e.target.value)}
+                      placeholder="Enter notification title..."
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#6A1B9A] focus:border-transparent"
+                    />
+                  </div>
+
+                  {/* Mensaje */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Notification Message
+                    </label>
+                    <textarea
+                      value={pushMessage}
+                      onChange={(e) => setPushMessage(e.target.value)}
+                      placeholder="Write your push notification message here..."
+                      rows={5}
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#6A1B9A] focus:border-transparent resize-none"
+                    />
+                    <p className="text-xs text-gray-500 mt-1">{pushMessage.length} characters</p>
+                  </div>
+
+                  {/* Botón enviar */}
+                  <button
+                    onClick={handleSendPush}
+                    disabled={!pushUserInfo?.canSendPush || !pushTitle.trim() || !pushMessage.trim() || sendingPush}
+                    className="w-full bg-[#6A1B9A] hover:bg-[#8B4DAE] text-white py-4 rounded-lg font-semibold text-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-3"
+                  >
+                    {sendingPush ? (
+                      <>
+                        <svg className="animate-spin h-6 w-6" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                        </svg>
+                        Sending...
+                      </>
+                    ) : (
+                      <>
+                        <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+                        </svg>
+                        Send Push Notification
+                      </>
+                    )}
+                  </button>
+                </div>
+              ) : (
+                <div className="space-y-5">
+                  {/* Target Selector */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Send To
+                    </label>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => setBulkTarget('all')}
+                        className={`flex-1 py-3 px-4 rounded-lg font-medium transition-colors ${
+                          bulkTarget === 'all'
+                            ? 'bg-[#6A1B9A] text-white'
+                            : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                        }`}
+                      >
+                        All Users
+                      </button>
+                      <button
+                        onClick={() => setBulkTarget('premium')}
+                        className={`flex-1 py-3 px-4 rounded-lg font-medium transition-colors ${
+                          bulkTarget === 'premium'
+                            ? 'bg-[#6A1B9A] text-white'
+                            : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                        }`}
+                      >
+                        Premium Only
+                      </button>
+                      <button
+                        onClick={() => setBulkTarget('free')}
+                        className={`flex-1 py-3 px-4 rounded-lg font-medium transition-colors ${
+                          bulkTarget === 'free'
+                            ? 'bg-[#6A1B9A] text-white'
+                            : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                        }`}
+                      >
+                        Free Only
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Separador */}
+                  <div className="border-t border-gray-200 pt-4">
+                    <h4 className="font-medium text-gray-900 mb-3">Notification Content</h4>
+                  </div>
+
+                  {/* Título */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Notification Title
+                    </label>
+                    <input
+                      type="text"
+                      value={bulkTitle}
+                      onChange={(e) => setBulkTitle(e.target.value)}
+                      placeholder="Enter notification title..."
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#6A1B9A] focus:border-transparent"
+                    />
+                  </div>
+
+                  {/* Mensaje */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Notification Message
+                    </label>
+                    <textarea
+                      value={bulkMessage}
+                      onChange={(e) => setBulkMessage(e.target.value)}
+                      placeholder="Write your push notification message here..."
+                      rows={5}
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#6A1B9A] focus:border-transparent resize-none"
+                    />
+                    <p className="text-xs text-gray-500 mt-1">{bulkMessage.length} characters</p>
+                  </div>
+
+                  {/* Resultado del envío masivo */}
+                  {bulkPushResult && (
+                    <div className="p-4 rounded-lg border bg-green-50 border-green-200">
+                      <div className="flex items-center gap-2 mb-2">
+                        <svg className="h-5 w-5 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        <span className="font-semibold text-green-900">Bulk Push Sent Successfully!</span>
+                      </div>
+                      <div className="grid grid-cols-2 gap-2 text-sm">
+                        <div className="text-green-700">✅ Sent: {bulkPushResult.sent}</div>
+                        <div className="text-red-600">❌ Failed: {bulkPushResult.failed}</div>
+                        <div className="text-gray-600">⏭️ No token: {bulkPushResult.skippedNoToken}</div>
+                        <div className="text-gray-600">📊 Total: {bulkPushResult.total}</div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Botón enviar */}
+                  <button
+                    onClick={handleSendBulkPush}
+                    disabled={!bulkTitle.trim() || !bulkMessage.trim() || sendingBulkPush}
+                    className="w-full bg-orange-500 hover:bg-orange-600 text-white py-4 rounded-lg font-semibold text-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-3"
+                  >
+                    {sendingBulkPush ? (
+                      <>
+                        <svg className="animate-spin h-6 w-6" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                        </svg>
+                        Sending to all users...
+                      </>
+                    ) : (
+                      <>
+                        <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                        </svg>
+                        Send to {bulkTarget === 'all' ? 'All Users' : bulkTarget === 'premium' ? 'Premium Users' : 'Free Users'}
+                      </>
+                    )}
+                  </button>
+                </div>
+              )}
             </div>
 
             {/* Info */}
@@ -1624,7 +1828,11 @@ Please respond immediately.`;
                 </svg>
                 <div>
                   <p className="font-medium text-blue-900">How it works</p>
-                  <p className="text-sm text-blue-700">Enter a phone number with country code (e.g., +1 for USA). The system will verify if this number belongs to a registered user. Push notifications can only be sent to users who have the app installed and notifications enabled.</p>
+                  <p className="text-sm text-blue-700">
+                    {pushMode === 'individual'
+                      ? 'Enter a phone number with country code (e.g., +1 for USA). The system will verify if this number belongs to a registered user. Push notifications can only be sent to users who have the app installed and notifications enabled.'
+                      : 'Send a push notification to all registered users at once. Only users with the app installed and notifications enabled will receive it. Use this feature responsibly.'}
+                  </p>
                 </div>
               </div>
             </div>
