@@ -173,13 +173,13 @@ export default function UsersProblemsPage() {
   const getEmergencyBadge = (badgeType: 'emergency_exit' | 'safe_by_contact') => {
     if (badgeType === 'emergency_exit') {
       return (
-        <span className="px-3 py-1 rounded-full text-xs font-bold bg-red-600 text-white animate-pulse">
+        <span className="px-3 py-1 rounded-full text-xs font-bold bg-red-600 text-white animate-pulse whitespace-nowrap">
           Emergency Exit
         </span>
       );
     }
     return (
-      <span className="px-3 py-1 rounded-full text-xs font-medium bg-gray-400 text-white">
+      <span className="px-3 py-1 rounded-full text-xs font-medium bg-gray-400 text-white whitespace-nowrap">
         Safe by Emergency Contact
       </span>
     );
