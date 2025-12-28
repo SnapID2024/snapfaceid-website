@@ -358,12 +358,15 @@ const Home: React.FC = () => {
 
       {/* Verified Identity Banner */}
       <section className="bg-[#3D1A54] py-8">
-        <div className="max-w-3xl mx-auto px-4">
+        <div className="max-w-3xl mx-auto px-4 text-center">
           <img
             src="/verified-identity-banner.png"
-            alt="Reviews stick to verified face identity — not just phone numbers"
-            className="w-full h-auto object-contain max-h-[300px] mx-auto"
+            alt="Verified face identity"
+            className="w-full h-auto object-contain max-h-[280px] mx-auto"
           />
+          <p className="text-white text-lg md:text-xl font-medium mt-4">
+            Reviews stick to verified face identity — not just phone numbers.
+          </p>
         </div>
       </section>
 
