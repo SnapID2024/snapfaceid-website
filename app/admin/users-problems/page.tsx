@@ -379,11 +379,11 @@ export default function UsersProblemsPage() {
               <table className="w-full">
                 <thead className="bg-gray-50 border-b">
                   <tr>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Status</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase min-w-[200px]">Status</th>
                     <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">User</th>
                     <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Phone</th>
                     <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Date Name</th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Location</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase min-w-[280px]">Location</th>
                     <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Emergency Contact</th>
                     <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Ended At</th>
                   </tr>
@@ -419,7 +419,7 @@ export default function UsersProblemsPage() {
                         <td className="px-4 py-3 text-sm text-gray-600">
                           <div>
                             {exit.locationType && <span className="font-medium">{exit.locationType}</span>}
-                            {exit.address && <div className="text-xs text-gray-500 truncate max-w-[200px]">{exit.address}</div>}
+                            {exit.address && <div className="text-xs text-gray-500">{exit.address}</div>}
                           </div>
                         </td>
                         <td className="px-4 py-3 text-sm text-gray-600">
