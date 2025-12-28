@@ -362,9 +362,9 @@ const Home: React.FC = () => {
           <img
             src="/verified-identity-banner.png"
             alt="Verified face identity"
-            className="w-full h-auto object-contain max-h-[280px] mx-auto"
+            className="w-full h-auto object-contain max-h-[320px] mx-auto"
           />
-          <p className="text-white text-lg md:text-xl font-medium mt-4">
+          <p className="text-white text-xl md:text-2xl font-medium mt-2">
             Reviews stick to verified face identity — not just phone numbers.
           </p>
         </div>
