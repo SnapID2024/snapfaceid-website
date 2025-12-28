@@ -1191,6 +1191,16 @@ Please respond immediately.`;
               </svg>
               Push Notifications
             </button>
+            {/* Problemas/Users Tab - Link to separate page */}
+            <a
+              href="/admin/users-problems"
+              className="px-4 py-2 rounded-lg font-medium text-sm whitespace-nowrap transition-all flex items-center gap-2 bg-gray-100 text-gray-600 hover:bg-gray-200"
+            >
+              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+              </svg>
+              Problemas/Users
+            </a>
           </div>
         </div>
       </div>
