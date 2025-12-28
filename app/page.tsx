@@ -364,7 +364,7 @@ const Home: React.FC = () => {
             alt="Verified face identity"
             className="w-full h-auto object-contain max-h-[320px] mx-auto"
           />
-          <p className="text-white text-base sm:text-xl md:text-2xl font-medium -mt-8 whitespace-nowrap">
+          <p className="text-white text-xs sm:text-lg md:text-2xl font-medium -mt-8 sm:whitespace-nowrap">
             Reviews stick to verified face identity — not just phone numbers.
           </p>
         </div>
