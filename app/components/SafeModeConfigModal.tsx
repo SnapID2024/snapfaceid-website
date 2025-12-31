@@ -92,6 +92,7 @@ const SafeModeConfigModal: React.FC<SafeModeConfigModalProps> = ({
       setConfig(currentConfig);
       setPendingSafeMode(isSafeMode);
       setActiveTab('config');
+      setSaveSuccess(false);
     }
   }, [isOpen, currentConfig, isSafeMode]);
 
@@ -110,12 +111,17 @@ const SafeModeConfigModal: React.FC<SafeModeConfigModalProps> = ({
     setConfig(newSafeMode ? DEFAULT_CONFIG : SAFE_CONFIG);
   };
 
+  const [saveSuccess, setSaveSuccess] = useState(false);
+
   const handleSave = async () => {
     setIsSaving(true);
+    setSaveSuccess(false);
     const success = await onSave(config, pendingSafeMode);
     setIsSaving(false);
     if (success) {
-      onClose();
+      setSaveSuccess(true);
+      // Auto-hide success message after 3 seconds
+      setTimeout(() => setSaveSuccess(false), 3000);
     }
   };
 
@@ -239,20 +245,33 @@ const SafeModeConfigModal: React.FC<SafeModeConfigModalProps> = ({
                 </p>
               </div>
 
+              {/* Success Message */}
+              {saveSuccess && (
+                <div className="mt-4 p-3 bg-green-900/30 border border-green-600 rounded-lg">
+                  <p className="text-green-400 text-sm text-center">
+                    Cambios guardados correctamente
+                  </p>
+                </div>
+              )}
+
               {/* Save Button */}
-              <div className="mt-6 flex gap-3">
+              <div className="mt-4 flex gap-3">
                 <button
                   onClick={handleCancel}
                   className="flex-1 px-4 py-3 bg-gray-700 text-gray-300 rounded-lg font-medium hover:bg-gray-600 transition-colors"
                 >
-                  Cancelar
+                  Cerrar
                 </button>
                 <button
                   onClick={handleSave}
                   disabled={isSaving}
-                  className="flex-1 px-4 py-3 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-500 transition-colors disabled:opacity-50"
+                  className={`flex-1 px-4 py-3 rounded-lg font-medium transition-colors disabled:opacity-50 ${
+                    saveSuccess
+                      ? 'bg-green-600 text-white hover:bg-green-500'
+                      : 'bg-blue-600 text-white hover:bg-blue-500'
+                  }`}
                 >
-                  {isSaving ? 'Guardando...' : 'Aplicar'}
+                  {isSaving ? 'Guardando...' : saveSuccess ? 'Guardado' : 'Aplicar'}
                 </button>
               </div>
             </div>

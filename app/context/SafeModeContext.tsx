@@ -91,8 +91,9 @@ export function SafeModeProvider({ children }: { children: ReactNode }) {
       if (response.ok) {
         const data = await response.json();
         if (data.success) {
+          // Create new object references to force React re-render
           setIsSafeMode(newSafeMode);
-          setConfig(newConfig);
+          setConfig({ ...newConfig });
           return true;
         }
       }
