@@ -55,8 +55,8 @@ const CONFIG_OPTIONS: ConfigOption[] = [
   },
   {
     key: 'alertLevel',
-    label: 'Nivel de alertas Guardian',
-    description: 'Alertas completas con toda la información',
+    label: 'Buscador del website',
+    description: 'Sin restricciones con opcion de cobro',
   },
   {
     key: 'flyerDetail',

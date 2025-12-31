@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Header from './components/Header';
 import Footer from './components/Footer';
+import { useSafeMode } from './context/SafeModeContext';
 import { Camera, Phone, Shield, Star, AlertTriangle, Search, Apple, Play, X, ChevronDown, Loader2 } from 'lucide-react';
 
 const WEB_HEADER_URL = 'https://d64gsuwffb70l.cloudfront.net/6834a8f25630f332851529fb_1765418803872_0552b83a.png';
@@ -98,6 +99,7 @@ interface Review {
 }
 
 const Home: React.FC = () => {
+  const { config } = useSafeMode();
   const [phoneNumber, setPhoneNumber] = useState('');
   const [selectedCountry, setSelectedCountry] = useState(countryCodes[0]);
   const [showCountryDropdown, setShowCountryDropdown] = useState(false);
@@ -428,7 +430,8 @@ const Home: React.FC = () => {
         </div>
       </section>
 
-      {/* Phone Search Section */}
+      {/* Phone Search Section - Controlled by alertLevel config */}
+      {config.alertLevel && (
       <section className="bg-gradient-to-b from-[#3D1A54] to-[#6A1B9A] py-8 md:py-12">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-6">
@@ -505,6 +508,7 @@ const Home: React.FC = () => {
           </div>
         </div>
       </section>
+      )}
 
       {/* Value Proposition - Compact */}
       <section className="bg-[#6A1B9A] py-8 md:py-12">
