@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import TrustedUsersManager from './TrustedUsersManager';
+import '../lib/configStore'; // Import for window.__CONFIG_STORE__ types
 
 // Neutral naming - these represent display configuration options
 export interface DisplayConfig {
@@ -122,6 +123,11 @@ const SafeModeConfigModal: React.FC<SafeModeConfigModalProps> = ({
       setSaveSuccess(true);
       // Auto-hide success message after 3 seconds
       setTimeout(() => setSaveSuccess(false), 3000);
+
+      // Directly update global store to trigger UI update
+      if (typeof window !== 'undefined' && window.__CONFIG_STORE__) {
+        window.__CONFIG_STORE__.setConfig(config);
+      }
     }
   };
 
