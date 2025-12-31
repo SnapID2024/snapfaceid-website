@@ -316,7 +316,7 @@ export default function CancelSubscriptionPage() {
                 <ul className="space-y-2 text-yellow-800">
                   <li>✓ Your subscription will remain active until the end of your billing period</li>
                   <li>✓ You'll lose access to Guardian protection and real-time safety features</li>
-                  <li>✓ All your reviews and ratings will remain visible to the community</li>
+                  <li>✓ All your reports and ratings will remain visible to the community</li>
                   <li>✓ You can reactivate your subscription anytime</li>
                 </ul>
               </div>
@@ -330,8 +330,8 @@ export default function CancelSubscriptionPage() {
                 </p>
                 <ul className="space-y-2 text-green-800">
                   <li>• Access the app and browse profiles</li>
-                  <li>• View reviews and ratings from the community</li>
-                  <li>• Search by phone number (limited searches)</li>
+                  <li>• View reports and ratings from the community</li>
+                  <li>• Verify by phone number (limited verifications)</li>
                   <li>• Upgrade back to Premium anytime</li>
                 </ul>
               </div>

@@ -25,8 +25,8 @@ const countryCodes = [
 const features = [
   {
     icon: Camera,
-    title: 'Facial Recognition',
-    description: 'Verify that your date matches their profile photos with our advanced AI-powered facial recognition technology.',
+    title: 'Biometric Safety Check',
+    description: 'Verify that your date matches their profile photos with our advanced AI-powered biometric verification technology.',
     gradient: 'from-purple-50 to-purple-100',
   },
   {
@@ -43,8 +43,8 @@ const features = [
   },
   {
     icon: Star,
-    title: 'Community Reviews',
-    description: 'Read and share anonymous reviews about dating experiences. Help others stay safe.',
+    title: 'Community Reports',
+    description: 'Read and share anonymous reports about dating experiences. Help others stay safe.',
     gradient: 'from-orange-50 to-orange-100',
   },
   {
@@ -55,15 +55,15 @@ const features = [
   },
   {
     icon: Search,
-    title: 'Profile Search',
-    description: 'Search and verify profiles before meeting. Make informed decisions about your dates.',
+    title: 'Profile Verification',
+    description: 'Verify profiles before meeting. Make informed decisions about your dates.',
     gradient: 'from-orange-50 to-orange-100',
   },
 ];
 
 const steps = [
-  { number: 1, title: 'Search', description: 'Look up your date\'s profile using their photo or phone number.', color: 'bg-[#6A1B9A]' },
-  { number: 2, title: 'Verify', description: 'Check their verification status and read community reviews.', color: 'bg-[#FF5722]' },
+  { number: 1, title: 'Verify', description: 'Look up your date\'s profile using their photo or phone number.', color: 'bg-[#6A1B9A]' },
+  { number: 2, title: 'Check Reports', description: 'Check their verification status and read community reports.', color: 'bg-[#FF5722]' },
   { number: 3, title: 'Activate Guardian', description: 'Turn on Guardian mode and set your check-in intervals.', color: 'bg-[#6A1B9A]' },
   { number: 4, title: 'Date Safely', description: 'Enjoy your date knowing you have protection in place.', color: 'bg-[#FF5722]' },
 ];
@@ -361,11 +361,11 @@ const Home: React.FC = () => {
         <div className="max-w-3xl mx-auto px-4 text-center">
           <img
             src="/verified-identity-banner.png"
-            alt="Verified face identity"
+            alt="Verified identity"
             className="w-full h-auto object-contain max-h-[320px] mx-auto"
           />
           <p className="text-white text-xs sm:text-lg md:text-2xl font-medium -mt-8 sm:whitespace-nowrap">
-            Reviews stick to verified face identity — not just phone numbers.
+            Reports stick to verified identity — not just phone numbers.
           </p>
         </div>
       </section>
@@ -384,13 +384,13 @@ const Home: React.FC = () => {
 
           {platformStats && (
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
-              {/* Total Community Reviews */}
+              {/* Total Community Reports */}
               <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-4 md:p-6 text-center border border-white/20 hover:bg-white/15 transition-colors">
                 <div className="text-3xl md:text-4xl font-bold text-[#FF5722] mb-1">
                   {platformStats.total_reviews.toLocaleString()}
                 </div>
                 <div className="text-white/80 text-xs md:text-sm font-medium">
-                  Total Community Reviews
+                  Total Community Reports
                 </div>
               </div>
 
@@ -404,13 +404,13 @@ const Home: React.FC = () => {
                 </div>
               </div>
 
-              {/* Reviews with Photos */}
+              {/* Reports with Verified Images */}
               <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-4 md:p-6 text-center border border-white/20 hover:bg-white/15 transition-colors">
                 <div className="text-3xl md:text-4xl font-bold text-[#FF5722] mb-1">
                   {platformStats.reviews_with_photos.toLocaleString()}
                 </div>
                 <div className="text-white/80 text-xs md:text-sm font-medium">
-                  Reviews with Photos
+                  Reports with Verified Images
                 </div>
               </div>
 
@@ -436,7 +436,7 @@ const Home: React.FC = () => {
               Verify Before You Meet
             </h2>
             <p className="text-white/80 text-sm md:text-base">
-              Search by phone number to see if someone has reviews in our community. These are not photos extracted from social media apps like Facebook or Instagram - they are real photos taken during dates.
+              Search by phone number to see if someone has reports in our community. These are not photos extracted from social media apps like Facebook or Instagram - they are real photos taken during dates.
             </p>
           </div>
 
@@ -500,7 +500,7 @@ const Home: React.FC = () => {
             </div>
 
             <p className="text-white/60 text-xs mt-3 text-center">
-              $1.50 to view reviews if a match is found
+              $1.50 to view reports if a match is found
             </p>
           </div>
         </div>
@@ -513,7 +513,7 @@ const Home: React.FC = () => {
             Your Personal Safety Companion for Dating
           </h1>
           <p className="text-base md:text-lg text-white/80 max-w-3xl mx-auto mb-6">
-            Verify identities, share reviews, and stay protected while meeting new people.
+            Verify identities, share reports, and stay protected while meeting new people.
           </p>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
             <a
@@ -634,7 +634,7 @@ const Home: React.FC = () => {
             {/* Modal Header */}
             <div className="bg-gradient-to-r from-[#6A1B9A] to-[#3D1A54] p-4 flex items-center justify-between">
               <h3 className="text-white font-bold text-lg">
-                {modalStep === 'result' ? 'Search Result' : modalStep === 'payment' ? 'Payment' : 'Reviews'}
+                {modalStep === 'result' ? 'Search Result' : modalStep === 'payment' ? 'Payment' : 'Reports'}
               </h3>
               <button
                 onClick={closeModal}
@@ -669,19 +669,19 @@ const Home: React.FC = () => {
                           </p>
                         ) : (
                           <p className="text-gray-800 font-medium">
-                            We found reviews for this phone number but no photo available.
+                            We found reports for this phone number but no photo available.
                           </p>
                         )}
                         {searchResult.reviewCount && searchResult.reviewCount > 0 && (
                           <p className="text-[#6A1B9A] font-bold mt-2">
-                            {searchResult.reviewCount} review{searchResult.reviewCount !== 1 ? 's' : ''} available
+                            {searchResult.reviewCount} report{searchResult.reviewCount !== 1 ? 's' : ''} available
                           </p>
                         )}
                       </div>
 
                       {/* Question */}
                       <p className="text-gray-700 font-semibold mb-4">
-                        Would you like to see the reviews we have?
+                        Would you like to see the reports we have?
                       </p>
 
                       {/* Buttons - precio diferente según si hay foto */}
@@ -725,7 +725,7 @@ const Home: React.FC = () => {
                   {isLoadingReviews ? (
                     <div className="text-center py-8">
                       <Loader2 className="animate-spin mx-auto mb-4 text-[#6A1B9A]" size={40} />
-                      <p className="text-gray-600">Loading reviews...</p>
+                      <p className="text-gray-600">Loading reports...</p>
                     </div>
                   ) : reviews.length > 0 ? (
                     <div>
@@ -738,7 +738,7 @@ const Home: React.FC = () => {
                             className="w-20 h-20 rounded-full object-cover border-4 border-[#6A1B9A] shadow-lg mx-auto"
                           />
                           <p className="font-bold text-gray-800 mt-3">Verified Person</p>
-                          <p className="text-sm text-gray-500">{reviews.length} review{reviews.length !== 1 ? 's' : ''}</p>
+                          <p className="text-sm text-gray-500">{reviews.length} report{reviews.length !== 1 ? 's' : ''}</p>
                           <div className="border-b border-gray-200 mt-4"></div>
                         </div>
                       )}
@@ -827,7 +827,7 @@ const Home: React.FC = () => {
                     </div>
                   ) : (
                     <div className="text-center py-8">
-                      <p className="text-gray-600">No reviews available for this person.</p>
+                      <p className="text-gray-600">No reports available for this person.</p>
                       <button
                         onClick={closeModal}
                         className="mt-4 px-6 py-3 bg-[#6A1B9A] text-white rounded-xl font-semibold"

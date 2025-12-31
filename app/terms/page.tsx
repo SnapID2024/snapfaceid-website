@@ -12,8 +12,8 @@ By registering and/or subscribing to our service, you accept the following terms
   {
     title: '2. Service Description',
     body: `This application is a PERSONAL SAFETY platform for women in dating situations. It allows users to:
-• Search information by phone number
-• Verify identities through facial recognition
+• Verify information by phone number
+• Verify identities through biometric safety check
 • Share personal experiences about interactions with other people
 • Activate Guardian protection during encounters
 
@@ -35,8 +35,8 @@ This measure exists to prevent fraud and protect the integrity of the platform.`
   {
     title: '4. Subscription, Payments and Refunds',
     body: `PREMIUM SUBSCRIPTION ($9.99 USD/month):
-• Required to create reviews with facial verification
-• Access to facial recognition searches
+• Required to create reports with identity verification
+• Access to biometric identity verification
 • Access to Guardian function
 
 NO REFUND POLICY:
@@ -49,37 +49,37 @@ NO REFUND POLICY:
 To cancel your subscription: Profile > Cancel Subscription, OR write to us at bellacruzcompany@gmail.com`,
   },
   {
-    title: '5. Review System',
-    body: `REVIEW RULES:
-• You can only leave ONE review per person (for life)
-• You have 7 days to edit your review for free
-• After 7 days, the review becomes PERMANENT
-• After 7 days, you CANNOT edit the review
-• After 7 days, you can only DELETE your own review by paying $20 USD
-• You cannot create multiple reviews about the same person
+    title: '5. Report System',
+    body: `REPORT RULES:
+• You can only leave ONE report per person (for life)
+• You have 7 days to edit your report for free
+• After 7 days, the report becomes PERMANENT
+• After 7 days, you CANNOT edit the report
+• After 7 days, you can only DELETE your own report by paying $20 USD
+• You cannot create multiple reports about the same person
 
 CONTENT RESPONSIBILITY:
-• YOU are the sole legal responsible for the content of your reviews
-• Reviews must be based on real and truthful experiences
-• False or defamatory reviews may result in legal action AGAINST YOU
+• YOU are the sole legal responsible for the content of your reports
+• Reports must be based on real and truthful experiences
+• False or defamatory reports may result in legal action AGAINST YOU
 • We reserve the right to remove content that violates these terms`,
   },
   {
     title: '6. User-Generated Content',
     body: `DISCLAIMER:
 
-Reviews and comments on this platform are PERSONAL OPINIONS of individual users. Bella Cruz Company does NOT verify, endorse, or guarantee the accuracy of any review.
+Reports and comments on this platform are PERSONAL OPINIONS of individual users. Bella Cruz Company does NOT verify, endorse, or guarantee the accuracy of any report.
 
 Bella Cruz Company acts solely as a technological intermediary and is NOT responsible for:
 • False or inaccurate information posted by users
-• Damages derived from decisions based on reviews
-• Disputes between users or between users and reviewed persons
+• Damages derived from decisions based on reports
+• Disputes between users or between users and reported persons
 • Consequences of encounters organized using this application
 
-Users who post reviews are the SOLE legal responsible for their content.`,
+Users who post reports are the SOLE legal responsible for their content.`,
   },
   {
-    title: '7. Rights of Reviewed Persons',
+    title: '7. Rights of Reported Persons',
     body: `If you appear on our platform and are NOT a registered user, you have the right to:
 • Request information about what data exists about you
 • Dispute information you consider false or inaccurate
@@ -90,18 +90,18 @@ To exercise these rights:
 2. Include proof of identity (selfie + ID document)
 3. Specify your request
 
-Review process:
+Verification process:
 • We will verify your identity (up to 30 days)
-• The information of the review author will NEVER be revealed
+• The information of the report author will NEVER be revealed
 • We will evaluate the request according to our policies
 • We will notify you of the decision by email`,
   },
   {
-    title: '8. Use of Facial Recognition',
-    body: `By using the facial search function, you acknowledge and accept that:
+    title: '8. Use of Biometric Safety Check',
+    body: `By using the biometric verification function, you acknowledge and accept that:
 
 • Photographs are processed through third-party services (Luxand Cloud API)
-• Biometric data is stored to allow future searches
+• Biometric data is stored to allow future verifications
 • By uploading a photo of another person, YOU declare that:
   - You have the legal right to share that image
   - The photographed person is over 18 years old
@@ -196,7 +196,7 @@ You agree to INDEMNIFY, DEFEND, and HOLD HARMLESS Bella Cruz Company, its office
     title: '10. Third-Party Services',
     body: `Your information is shared with the following providers to operate the service:
 
-• Luxand Cloud API: Facial recognition processing
+• Luxand Cloud API: Biometric verification processing
 • Stripe: Payment and subscription processing
 • Twilio: SMS/MMS alert sending (Guardian)
 • Firebase/Google: Infrastructure and storage
@@ -208,7 +208,7 @@ Each provider has its own privacy policy. By using our application, you also acc
     body: `TO THE MAXIMUM EXTENT PERMITTED BY LAW:
 
 • Bella Cruz Company does NOT guarantee the safety of any encounter
-• We do NOT verify the identity of users or reviewed persons
+• We do NOT verify the identity of users or reported persons
 • We are NOT responsible for encounters that result in physical, emotional, or financial harm
 • We do NOT guarantee continuous availability of the service
 • We are NOT responsible for loss of data, account, or subscription
@@ -224,7 +224,7 @@ INDEMNIFICATION: You agree to indemnify and hold harmless Bella Cruz Company, it
 By registering, you confirm that:
 • You are 18 years old or older
 • You will NOT upload photos of minors
-• You will NOT create reviews about minors
+• You will NOT create reports about minors
 
 Any content related to minors will be immediately removed and may result in:
 • Permanent account suspension
@@ -264,9 +264,9 @@ WHEN UNINSTALLING THE APP:
 BELLACRUZ ONLINE LLC
 Email: bellacruzcompany@gmail.com
 
-For requests from reviewed persons:
+For requests from reported persons:
 Email: bellacruzcompany@gmail.com
-Subject: 'Information Request - Reviewed Person'`,
+Subject: 'Information Request - Reported Person'`,
   },
 ];
 

@@ -46,7 +46,7 @@ export default function PrivacyPage() {
               <div className="text-gray-700 whitespace-pre-line leading-relaxed">
                 {`We use information to:
 
-• Provide the core app features (search, verification, reviews, and Guardian)
+• Provide the core app features (verification, reports, and Guardian)
 • Deliver safety alerts and generate Guardian emergency flyers
 • Maintain the security and integrity of the platform and prevent fraud
 • Provide customer support and handle complaints/requests
@@ -73,7 +73,7 @@ export default function PrivacyPage() {
                 {`We may share information with service providers to operate SnapfaceID, including:
 
 • Firebase/Google (infrastructure, database, and storage)
-• Luxand (facial recognition processing when you use facial verification/search)
+• Luxand (biometric verification processing when you use identity verification)
 • Stripe (subscription and payment processing)
 • Twilio (SMS/MMS delivery for Guardian alerts)
 
