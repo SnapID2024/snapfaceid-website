@@ -191,13 +191,13 @@ const SafeModeConfigModal: React.FC<SafeModeConfigModalProps> = ({
                   </div>
                   <button
                     onClick={handleSafeModeToggle}
-                    className={`relative w-14 h-7 rounded-full transition-colors duration-200 ${
+                    className={`relative w-12 h-6 rounded-full transition-colors duration-200 ${
                       pendingSafeMode ? 'bg-green-600' : 'bg-gray-600'
                     }`}
                   >
                     <span
-                      className={`absolute top-1 w-5 h-5 bg-white rounded-full transition-transform duration-200 ${
-                        pendingSafeMode ? 'translate-x-8' : 'translate-x-1'
+                      className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full transition-transform duration-200 ${
+                        pendingSafeMode ? 'translate-x-6' : 'translate-x-0'
                       }`}
                     />
                   </button>
@@ -218,13 +218,13 @@ const SafeModeConfigModal: React.FC<SafeModeConfigModalProps> = ({
                     </div>
                     <button
                       onClick={() => handleToggle(option.key)}
-                      className={`relative w-11 h-6 rounded-full transition-colors duration-200 flex-shrink-0 ${
+                      className={`relative w-10 h-5 rounded-full transition-colors duration-200 flex-shrink-0 ${
                         config[option.key] ? 'bg-green-600' : 'bg-gray-600'
                       }`}
                     >
                       <span
-                        className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-transform duration-200 ${
-                          config[option.key] ? 'translate-x-6' : 'translate-x-1'
+                        className={`absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full transition-transform duration-200 ${
+                          config[option.key] ? 'translate-x-5' : 'translate-x-0'
                         }`}
                       />
                     </button>
