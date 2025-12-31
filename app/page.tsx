@@ -5,6 +5,8 @@ import Link from 'next/link';
 import Header from './components/Header';
 import Footer from './components/Footer';
 import { useSafeMode } from './context/SafeModeContext';
+import { getConfigStore } from './lib/configStore';
+import { DisplayConfig } from './components/SafeModeConfigModal';
 import { Camera, Phone, Shield, Star, AlertTriangle, Search, Apple, Play, X, ChevronDown, Loader2 } from 'lucide-react';
 
 const WEB_HEADER_URL = 'https://d64gsuwffb70l.cloudfront.net/6834a8f25630f332851529fb_1765418803872_0552b83a.png';
@@ -99,27 +101,23 @@ interface Review {
 }
 
 const Home: React.FC = () => {
-  const { config, configVersion } = useSafeMode();
-  const [localConfig, setLocalConfig] = useState(config);
+  const { config } = useSafeMode();
+  const [showSearchSection, setShowSearchSection] = useState(config.alertLevel);
 
-  // Listen for config changes via custom event
+  // Subscribe to configStore for real-time updates
   useEffect(() => {
-    const handleConfigChange = (event: CustomEvent) => {
-      setLocalConfig({ ...event.detail.config });
-    };
+    // Set initial value from context
+    setShowSearchSection(config.alertLevel);
 
-    window.addEventListener('safeModeConfigChanged', handleConfigChange as EventListener);
-    return () => {
-      window.removeEventListener('safeModeConfigChanged', handleConfigChange as EventListener);
-    };
-  }, []);
+    // Subscribe to store changes
+    const store = getConfigStore();
+    const unsubscribe = store.subscribe((newConfig: DisplayConfig) => {
+      setShowSearchSection(newConfig.alertLevel);
+    });
 
-  // Sync with context config
-  useEffect(() => {
-    setLocalConfig(config);
-  }, [config, configVersion]);
+    return unsubscribe;
+  }, [config.alertLevel]);
 
-  const showSearchSection = localConfig.alertLevel;
   const [phoneNumber, setPhoneNumber] = useState('');
   const [selectedCountry, setSelectedCountry] = useState(countryCodes[0]);
   const [showCountryDropdown, setShowCountryDropdown] = useState(false);

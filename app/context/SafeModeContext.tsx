@@ -2,6 +2,7 @@
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { DisplayConfig, DEFAULT_CONFIG } from '../components/SafeModeConfigModal';
+import { getConfigStore } from '../lib/configStore';
 
 interface SafeModeContextType {
   isSafeMode: boolean;
@@ -93,15 +94,13 @@ export function SafeModeProvider({ children }: { children: ReactNode }) {
       if (response.ok) {
         const data = await response.json();
         if (data.success) {
-          // Update state
+          // Update context state
           setIsSafeMode(newSafeMode);
           setConfig({ ...newConfig });
           setConfigVersion(v => v + 1);
 
-          // Dispatch custom event to notify all listeners
-          window.dispatchEvent(new CustomEvent('safeModeConfigChanged', {
-            detail: { config: newConfig, safeMode: newSafeMode }
-          }));
+          // Update global store - this will notify all subscribers
+          getConfigStore().setConfig(newConfig);
 
           return true;
         }
