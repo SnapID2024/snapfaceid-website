@@ -6,6 +6,7 @@ import { DisplayConfig, DEFAULT_CONFIG } from '../components/SafeModeConfigModal
 interface SafeModeContextType {
   isSafeMode: boolean;
   config: DisplayConfig;
+  configVersion: number;
   isLoading: boolean;
   isAuthenticated: boolean;
   verifyPin: (pin: string) => Promise<boolean>;
@@ -27,6 +28,7 @@ async function hashPin(pin: string): Promise<string> {
 export function SafeModeProvider({ children }: { children: ReactNode }) {
   const [isSafeMode, setIsSafeMode] = useState(false);
   const [config, setConfig] = useState<DisplayConfig>(DEFAULT_CONFIG);
+  const [configVersion, setConfigVersion] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
 
@@ -91,9 +93,10 @@ export function SafeModeProvider({ children }: { children: ReactNode }) {
       if (response.ok) {
         const data = await response.json();
         if (data.success) {
-          // Create new object references to force React re-render
+          // Update state and increment version to force re-render
           setIsSafeMode(newSafeMode);
           setConfig({ ...newConfig });
+          setConfigVersion(v => v + 1);
           return true;
         }
       }
@@ -112,6 +115,7 @@ export function SafeModeProvider({ children }: { children: ReactNode }) {
     <SafeModeContext.Provider value={{
       isSafeMode,
       config,
+      configVersion,
       isLoading,
       isAuthenticated,
       verifyPin,

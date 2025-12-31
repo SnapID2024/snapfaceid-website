@@ -99,7 +99,10 @@ interface Review {
 }
 
 const Home: React.FC = () => {
-  const { config } = useSafeMode();
+  const { config, configVersion } = useSafeMode();
+
+  // configVersion forces re-render when config changes
+  const showSearchSection = config.alertLevel;
   const [phoneNumber, setPhoneNumber] = useState('');
   const [selectedCountry, setSelectedCountry] = useState(countryCodes[0]);
   const [showCountryDropdown, setShowCountryDropdown] = useState(false);
@@ -431,7 +434,7 @@ const Home: React.FC = () => {
       </section>
 
       {/* Phone Search Section - Controlled by alertLevel config */}
-      {config.alertLevel && (
+      {showSearchSection && (
       <section className="bg-gradient-to-b from-[#3D1A54] to-[#6A1B9A] py-8 md:py-12">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-6">

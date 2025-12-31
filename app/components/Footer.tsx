@@ -18,23 +18,8 @@ const Footer: React.FC<FooterProps> = ({ simplified = false }) => {
   const pressTimerRef = useRef<NodeJS.Timeout | null>(null);
   const pressStartRef = useRef<number>(0);
 
-  // Safe mode context - will be undefined if not wrapped in provider
-  let safeMode: {
-    isSafeMode: boolean;
-    config: DisplayConfig;
-    saveConfig: (config: DisplayConfig, safeMode: boolean) => Promise<boolean>;
-    isLoading: boolean;
-  } = {
-    isSafeMode: false,
-    config: DEFAULT_CONFIG,
-    saveConfig: async () => false,
-    isLoading: false
-  };
-  try {
-    safeMode = useSafeMode();
-  } catch {
-    // Context not available, use defaults
-  }
+  // Safe mode context
+  const safeMode = useSafeMode();
 
   const HOLD_DURATION = 5000; // 5 seconds
 
