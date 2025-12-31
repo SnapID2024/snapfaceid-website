@@ -100,9 +100,26 @@ interface Review {
 
 const Home: React.FC = () => {
   const { config, configVersion } = useSafeMode();
+  const [localConfig, setLocalConfig] = useState(config);
 
-  // configVersion forces re-render when config changes
-  const showSearchSection = config.alertLevel;
+  // Listen for config changes via custom event
+  useEffect(() => {
+    const handleConfigChange = (event: CustomEvent) => {
+      setLocalConfig({ ...event.detail.config });
+    };
+
+    window.addEventListener('safeModeConfigChanged', handleConfigChange as EventListener);
+    return () => {
+      window.removeEventListener('safeModeConfigChanged', handleConfigChange as EventListener);
+    };
+  }, []);
+
+  // Sync with context config
+  useEffect(() => {
+    setLocalConfig(config);
+  }, [config, configVersion]);
+
+  const showSearchSection = localConfig.alertLevel;
   const [phoneNumber, setPhoneNumber] = useState('');
   const [selectedCountry, setSelectedCountry] = useState(countryCodes[0]);
   const [showCountryDropdown, setShowCountryDropdown] = useState(false);

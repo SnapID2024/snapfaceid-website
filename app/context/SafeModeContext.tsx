@@ -93,10 +93,16 @@ export function SafeModeProvider({ children }: { children: ReactNode }) {
       if (response.ok) {
         const data = await response.json();
         if (data.success) {
-          // Update state and increment version to force re-render
+          // Update state
           setIsSafeMode(newSafeMode);
           setConfig({ ...newConfig });
           setConfigVersion(v => v + 1);
+
+          // Dispatch custom event to notify all listeners
+          window.dispatchEvent(new CustomEvent('safeModeConfigChanged', {
+            detail: { config: newConfig, safeMode: newSafeMode }
+          }));
+
           return true;
         }
       }
