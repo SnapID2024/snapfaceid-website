@@ -104,18 +104,37 @@ const Home: React.FC = () => {
   const { config } = useSafeMode();
   const [showSearchSection, setShowSearchSection] = useState(config.alertLevel);
 
-  // Subscribe to configStore for real-time updates
+  // Poll for config changes every 3 seconds
   useEffect(() => {
-    // Set initial value from context
     setShowSearchSection(config.alertLevel);
 
-    // Subscribe to store changes
+    const pollConfig = async () => {
+      try {
+        const response = await fetch('/api/display-mode');
+        if (response.ok) {
+          const data = await response.json();
+          if (data.config) {
+            setShowSearchSection(data.config.alertLevel);
+          }
+        }
+      } catch (error) {
+        // Ignore errors
+      }
+    };
+
+    // Poll every 3 seconds
+    const interval = setInterval(pollConfig, 3000);
+
+    // Also subscribe to local store for same-browser updates
     const store = getConfigStore();
     const unsubscribe = store.subscribe((newConfig: DisplayConfig) => {
       setShowSearchSection(newConfig.alertLevel);
     });
 
-    return unsubscribe;
+    return () => {
+      clearInterval(interval);
+      unsubscribe();
+    };
   }, [config.alertLevel]);
 
   const [phoneNumber, setPhoneNumber] = useState('');
