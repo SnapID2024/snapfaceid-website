@@ -2,7 +2,7 @@
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { DisplayConfig, DEFAULT_CONFIG } from '../components/SafeModeConfigModal';
-import { getConfigStore } from '../lib/configStore';
+import '../lib/configStore'; // Import to ensure types are available
 
 interface SafeModeContextType {
   isSafeMode: boolean;
@@ -99,8 +99,10 @@ export function SafeModeProvider({ children }: { children: ReactNode }) {
           setConfig({ ...newConfig });
           setConfigVersion(v => v + 1);
 
-          // Update global store - this will notify all subscribers
-          getConfigStore().setConfig(newConfig);
+          // Update global store - directly access window to ensure same instance
+          if (typeof window !== 'undefined' && window.__CONFIG_STORE__) {
+            window.__CONFIG_STORE__.setConfig(newConfig);
+          }
 
           return true;
         }
