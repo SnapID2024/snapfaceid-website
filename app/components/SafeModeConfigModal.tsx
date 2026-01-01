@@ -196,9 +196,9 @@ const SafeModeConfigModal: React.FC<SafeModeConfigModalProps> = ({
               <div className="mb-6 p-4 bg-gray-800 rounded-lg border border-gray-700">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-white font-medium">Modo Apple (Not Trusted)</p>
+                    <p className="text-white font-medium">Modo Apple (Not for Trusted users)</p>
                     <p className="text-gray-400 text-xs mt-1">
-                      {pendingSafeMode ? 'Activo - Vista restringida para Not Trusted' : 'Inactivo - Vista completa para todos'}
+                      {pendingSafeMode ? 'Activo - Vista restringida' : 'Inactivo - Vista completa'}
                     </p>
                   </div>
                   <button
