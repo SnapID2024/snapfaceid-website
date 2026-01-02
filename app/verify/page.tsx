@@ -215,18 +215,37 @@ export default function VerifyPage() {
     return presetAvatars[1]; // Default avatar
   };
 
-  // Review presets
+  // Review presets - must match mobile app
   const reviewPresets: { [key: number]: string } = {
-    1: "Showed aggressive or violent behavior",
-    2: "Made me feel unsafe or uncomfortable",
-    3: "Lied about their identity or intentions",
-    4: "Pressured me for money or favors",
-    5: "Sent inappropriate or unwanted content",
-    6: "Ghosted or disappeared suddenly",
-    7: "Was disrespectful or rude",
-    8: "Tried to isolate me from others",
-    9: "Had suspicious or secretive behavior",
-    10: "Made threats or intimidating comments",
+    1: "Good person in general (nothing weird)",
+    2: "Nervous person, completed the Date but left quickly",
+    3: "Catfish - Fake photos",
+    4: "Seems to be running some type of scam",
+    5: "Seems like an escort or is involved in prostitution",
+    6: "Stole from me or tried to",
+    7: "Tried to harm me physically or mentally",
+    8: "Drug dealer or involved in illegal activities",
+    9: "Seemed very needy and strange",
+    10: "Works for a government institution",
+    11: "Broke clown who bothers you late at night",
+    12: "Lied about their legal age and I rejected them",
+    13: "Very verbally aggressive",
+    14: "Doesn't want to go through verification process",
+    15: "Only uses inappropriate or very graphic language",
+    16: "Sends photos of his private parts inappropriately",
+    17: "Asks inappropriate sexual questions from first contact",
+    18: "Not willing to cover basic date expenses",
+    19: "Only suggests low-budget or casual places",
+    20: "Makes plans but doesn't follow through (Waste of time)",
+    21: "He's married or in a relationship and wants to go out with me",
+    22: "Won't interact with anyone from their community they're all rude and uneducated",
+    23: "Only seeks intimate content without intention to meet",
+    24: "Physically unattractive person, but very good person",
+    25: "Physically unpleasant as well as their personality",
+    26: "Very sexy and pleasant person",
+    27: "Very arrogant and difficult person to deal with",
+    28: "Great time with this person, highly recommended",
+    29: "Seems to be under the influence of narcotics, was not acting coherently",
   };
 
   // Detectar screenshot (limitado pero puede disuadir)
@@ -438,14 +457,15 @@ export default function VerifyPage() {
                 </div>
               )}
 
-              {/* Teléfonos - Últimos 3, formato parcial */}
+              {/* Teléfonos - Últimos 3, formato vertical */}
               {profileData.numeros_telefono && profileData.numeros_telefono.length > 0 && (
                 <div className="bg-white/95 backdrop-blur rounded-2xl p-4 shadow-lg">
                   <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Associated Numbers</h3>
-                  <div className="flex flex-wrap gap-2 justify-center">
-                    {profileData.numeros_telefono.slice(-3).map((phone, idx) => (
-                      <div key={idx} className="bg-gray-100 rounded-xl px-4 py-2">
+                  <div className="space-y-2">
+                    {profileData.numeros_telefono.slice(-3).reverse().map((phone, idx) => (
+                      <div key={idx} className="bg-gray-100 rounded-xl px-4 py-3 flex items-center justify-between">
                         <span className="font-mono text-sm text-gray-700">{formatPhonePartial(phone)}</span>
+                        <span className="text-[10px] text-gray-400">#{profileData.numeros_telefono.length - idx}</span>
                       </div>
                     ))}
                   </div>
