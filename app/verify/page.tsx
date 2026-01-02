@@ -21,6 +21,7 @@ interface ProfileData {
   selfies: string[];
   numeros_telefono: string[];
   reviews: ReviewData[];
+  created_at?: string;
 }
 
 interface TokenInfo {
@@ -215,37 +216,271 @@ export default function VerifyPage() {
     return presetAvatars[1]; // Default avatar
   };
 
-  // Review presets - must match mobile app
-  const reviewPresets: { [key: number]: string } = {
-    1: "Good person in general (nothing weird)",
-    2: "Nervous person, completed the Date but left quickly",
-    3: "Catfish - Fake photos",
-    4: "Seems to be running some type of scam",
-    5: "Seems like an escort or is involved in prostitution",
-    6: "Stole from me or tried to",
-    7: "Tried to harm me physically or mentally",
-    8: "Drug dealer or involved in illegal activities",
-    9: "Seemed very needy and strange",
-    10: "Works for a government institution",
-    11: "Broke clown who bothers you late at night",
-    12: "Lied about their legal age and I rejected them",
-    13: "Very verbally aggressive",
-    14: "Doesn't want to go through verification process",
-    15: "Only uses inappropriate or very graphic language",
-    16: "Sends photos of his private parts inappropriately",
-    17: "Asks inappropriate sexual questions from first contact",
-    18: "Not willing to cover basic date expenses",
-    19: "Only suggests low-budget or casual places",
-    20: "Makes plans but doesn't follow through (Waste of time)",
-    21: "He's married or in a relationship and wants to go out with me",
-    22: "Won't interact with anyone from their community they're all rude and uneducated",
-    23: "Only seeks intimate content without intention to meet",
-    24: "Physically unattractive person, but very good person",
-    25: "Physically unpleasant as well as their personality",
-    26: "Very sexy and pleasant person",
-    27: "Very arrogant and difficult person to deal with",
-    28: "Great time with this person, highly recommended",
-    29: "Seems to be under the influence of narcotics, was not acting coherently",
+  // Detect user language
+  const [userLanguage, setUserLanguage] = useState<string>('en');
+
+  useEffect(() => {
+    const browserLang = navigator.language?.split('-')[0] || 'en';
+    const supportedLangs = ['en', 'es', 'fr', 'pt', 'it', 'de', 'ru', 'zh'];
+    setUserLanguage(supportedLangs.includes(browserLang) ? browserLang : 'en');
+  }, []);
+
+  // Review presets translations - must match mobile app
+  const reviewPresetsTranslations: { [lang: string]: { [key: number]: string } } = {
+    en: {
+      1: "Good person in general (nothing weird)",
+      2: "Nervous person, completed the Date but left quickly",
+      3: "Catfish - Fake photos",
+      4: "Seems to be running some type of scam",
+      5: "Seems like an escort or is involved in prostitution",
+      6: "Stole from me or tried to",
+      7: "Tried to harm me physically or mentally",
+      8: "Drug dealer or involved in illegal activities",
+      9: "Seemed very needy and strange",
+      10: "Works for a government institution",
+      11: "Broke clown who bothers you late at night",
+      12: "Lied about their legal age and I rejected them",
+      13: "Very verbally aggressive",
+      14: "Doesn't want to go through verification process",
+      15: "Only uses inappropriate or very graphic language",
+      16: "Sends photos of his private parts inappropriately",
+      17: "Asks inappropriate sexual questions from first contact",
+      18: "Not willing to cover basic date expenses",
+      19: "Only suggests low-budget or casual places",
+      20: "Makes plans but doesn't follow through (Waste of time)",
+      21: "He's married or in a relationship and wants to go out with me",
+      22: "Won't interact with anyone from their community they're all rude and uneducated",
+      23: "Only seeks intimate content without intention to meet",
+      24: "Physically unattractive person, but very good person",
+      25: "Physically unpleasant as well as their personality",
+      26: "Very sexy and pleasant person",
+      27: "Very arrogant and difficult person to deal with",
+      28: "Great time with this person, highly recommended",
+      29: "Seems to be under the influence of narcotics, was not acting coherently",
+    },
+    es: {
+      1: "Buena persona en general (nada extraño)",
+      2: "Persona nerviosa, completó la Cita pero se fue rápido",
+      3: "Catfish - Fotos falsas",
+      4: "Parece estar ejecutando algún tipo de estafa",
+      5: "Parece ser escort o está involucrado/a en prostitución",
+      6: "Me robó o intentó hacerlo",
+      7: "Intentó hacerme daño físico o mental",
+      8: "Vendedor de drogas o involucrado en actividades ilegales",
+      9: "Pareció muy necesitado/a y extraño/a",
+      10: "Trabaja para una institución gubernamental",
+      11: "Payaso sin dinero que te molesta a altas horas",
+      12: "Mintió sobre su edad legal y lo/la rechacé",
+      13: "Muy agresivo/a verbalmente",
+      14: "No quiere pasar por el proceso de verificación",
+      15: "Solo usa lenguaje inapropiado o muy gráfico",
+      16: "Envía fotos de sus partes íntimas de forma inapropiada",
+      17: "Hace preguntas sexuales inapropiadas desde el primer contacto",
+      18: "No está dispuesto/a a cubrir gastos básicos de la cita",
+      19: "Solo sugiere lugares de bajo presupuesto o casuales",
+      20: "Hace planes pero no los cumple (Pérdida de tiempo)",
+      21: "Está casado/a o en una relación y quiere salir conmigo",
+      22: "No interactuará con nadie de su comunidad, son todos groseros y sin educación",
+      23: "Solo busca contenido íntimo sin intención de conocerse",
+      24: "Persona físicamente poco atractiva, pero muy buena persona",
+      25: "Físicamente desagradable al igual que su personalidad",
+      26: "Persona muy sexy y agradable",
+      27: "Persona muy arrogante y difícil de tratar",
+      28: "Gran momento con esta persona, muy recomendado/a",
+      29: "Parece estar bajo la influencia de narcóticos, no actuaba coherentemente",
+    },
+    fr: {
+      1: "Bonne personne en général (rien de bizarre)",
+      2: "Personne nerveuse, a terminé le rendez-vous mais est partie rapidement",
+      3: "Catfish - Fausses photos",
+      4: "Semble faire une arnaque",
+      5: "Semble être escort ou impliqué(e) dans la prostitution",
+      6: "M'a volé ou a essayé",
+      7: "A essayé de me faire du mal physiquement ou mentalement",
+      8: "Dealer de drogue ou impliqué dans des activités illégales",
+      9: "Semblait très en demande et étrange",
+      10: "Travaille pour une institution gouvernementale",
+      11: "Clown fauché qui vous dérange tard le soir",
+      12: "A menti sur son âge légal et je l'ai rejeté(e)",
+      13: "Très agressif(ve) verbalement",
+      14: "Ne veut pas passer par le processus de vérification",
+      15: "N'utilise que du langage inapproprié ou très graphique",
+      16: "Envoie des photos de ses parties intimes de manière inappropriée",
+      17: "Pose des questions sexuelles inappropriées dès le premier contact",
+      18: "Pas disposé(e) à couvrir les frais de base du rendez-vous",
+      19: "Ne suggère que des endroits bon marché ou décontractés",
+      20: "Fait des plans mais ne les suit pas (Perte de temps)",
+      21: "Il/Elle est marié(e) ou en couple et veut sortir avec moi",
+      22: "Ne veut interagir avec personne de leur communauté, ils sont tous impolis et mal éduqués",
+      23: "Ne cherche que du contenu intime sans intention de se rencontrer",
+      24: "Personne physiquement peu attrayante, mais très bonne personne",
+      25: "Physiquement désagréable ainsi que sa personnalité",
+      26: "Personne très sexy et agréable",
+      27: "Personne très arrogante et difficile à gérer",
+      28: "Super moment avec cette personne, fortement recommandé(e)",
+      29: "Semble être sous l'influence de stupéfiants, n'agissait pas de manière cohérente",
+    },
+    pt: {
+      1: "Boa pessoa em geral (nada estranho)",
+      2: "Pessoa nervosa, completou o Encontro mas saiu rapidamente",
+      3: "Catfish - Fotos falsas",
+      4: "Parece estar aplicando algum tipo de golpe",
+      5: "Parece ser acompanhante ou está envolvido(a) em prostituição",
+      6: "Me roubou ou tentou",
+      7: "Tentou me prejudicar física ou mentalmente",
+      8: "Traficante de drogas ou envolvido em atividades ilegais",
+      9: "Pareceu muito carente e estranho(a)",
+      10: "Trabalha para uma instituição governamental",
+      11: "Palhaço sem dinheiro que te incomoda tarde da noite",
+      12: "Mentiu sobre sua idade legal e eu o(a) rejeitei",
+      13: "Muito agressivo(a) verbalmente",
+      14: "Não quer passar pelo processo de verificação",
+      15: "Só usa linguagem inapropriada ou muito gráfica",
+      16: "Envia fotos de suas partes íntimas de forma inadequada",
+      17: "Faz perguntas sexuais inadequadas desde o primeiro contato",
+      18: "Não está disposto(a) a cobrir despesas básicas do encontro",
+      19: "Só sugere lugares de baixo orçamento ou casuais",
+      20: "Faz planos mas não cumpre (Perda de tempo)",
+      21: "Ele/Ela é casado(a) ou em um relacionamento e quer sair comigo",
+      22: "Não vai interagir com ninguém da comunidade deles, são todos rudes e sem educação",
+      23: "Só busca conteúdo íntimo sem intenção de se conhecer",
+      24: "Pessoa fisicamente pouco atraente, mas muito boa pessoa",
+      25: "Fisicamente desagradável assim como sua personalidade",
+      26: "Pessoa muito sexy e agradável",
+      27: "Pessoa muito arrogante e difícil de lidar",
+      28: "Ótimo momento com essa pessoa, altamente recomendado(a)",
+      29: "Parece estar sob influência de narcóticos, não estava agindo coerentemente",
+    },
+    it: {
+      1: "Brava persona in generale (niente di strano)",
+      2: "Persona nervosa, ha completato l'Appuntamento ma se ne è andata in fretta",
+      3: "Catfish - Foto false",
+      4: "Sembra stia facendo qualche tipo di truffa",
+      5: "Sembra essere escort o coinvolto/a nella prostituzione",
+      6: "Mi ha rubato o ha provato",
+      7: "Ha cercato di farmi del male fisicamente o mentalmente",
+      8: "Spacciatore di droga o coinvolto in attività illegali",
+      9: "Sembrava molto bisognoso/a e strano/a",
+      10: "Lavora per un'istituzione governativa",
+      11: "Pagliaccio al verde che ti disturba a tarda notte",
+      12: "Ha mentito sulla sua età legale e l'ho rifiutato/a",
+      13: "Molto aggressivo/a verbalmente",
+      14: "Non vuole passare attraverso il processo di verifica",
+      15: "Usa solo linguaggio inappropriato o molto esplicito",
+      16: "Invia foto delle sue parti intime in modo inappropriato",
+      17: "Fa domande sessuali inappropriate dal primo contatto",
+      18: "Non è disposto/a a coprire le spese base dell'appuntamento",
+      19: "Suggerisce solo posti economici o casual",
+      20: "Fa piani ma non li mantiene (Perdita di tempo)",
+      21: "È sposato/a o in una relazione e vuole uscire con me",
+      22: "Non interagirà con nessuno della loro comunità, sono tutti maleducati",
+      23: "Cerca solo contenuti intimi senza intenzione di incontrarsi",
+      24: "Persona fisicamente poco attraente, ma ottima persona",
+      25: "Fisicamente sgradevole così come la sua personalità",
+      26: "Persona molto sexy e piacevole",
+      27: "Persona molto arrogante e difficile da gestire",
+      28: "Ottimo momento con questa persona, altamente raccomandato/a",
+      29: "Sembra essere sotto l'influenza di narcotici, non agiva in modo coerente",
+    },
+    de: {
+      1: "Gute Person im Allgemeinen (nichts Seltsames)",
+      2: "Nervöse Person, hat das Date beendet, ist aber schnell gegangen",
+      3: "Catfish - Gefälschte Fotos",
+      4: "Scheint eine Art Betrug durchzuführen",
+      5: "Scheint Escort zu sein oder in Prostitution verwickelt",
+      6: "Hat mich bestohlen oder es versucht",
+      7: "Hat versucht, mir körperlich oder geistig zu schaden",
+      8: "Drogendealer oder in illegale Aktivitäten verwickelt",
+      9: "Wirkte sehr bedürftig und seltsam",
+      10: "Arbeitet für eine Regierungsinstitution",
+      11: "Pleite-Clown, der dich spät nachts belästigt",
+      12: "Hat über sein/ihr legales Alter gelogen und ich habe ihn/sie abgelehnt",
+      13: "Sehr verbal aggressiv",
+      14: "Will den Verifizierungsprozess nicht durchlaufen",
+      15: "Verwendet nur unangemessene oder sehr explizite Sprache",
+      16: "Sendet unangemessen Fotos seiner Intimteile",
+      17: "Stellt unangemessene sexuelle Fragen vom ersten Kontakt an",
+      18: "Nicht bereit, grundlegende Date-Kosten zu übernehmen",
+      19: "Schlägt nur günstige oder zwanglose Orte vor",
+      20: "Macht Pläne, hält sie aber nicht ein (Zeitverschwendung)",
+      21: "Er/Sie ist verheiratet oder in einer Beziehung und will mit mir ausgehen",
+      22: "Will mit niemandem aus ihrer Community interagieren, sie sind alle unhöflich und ungebildet",
+      23: "Sucht nur intime Inhalte ohne Absicht, sich zu treffen",
+      24: "Körperlich unattraktive Person, aber sehr gute Person",
+      25: "Körperlich unangenehm sowie ihre Persönlichkeit",
+      26: "Sehr sexy und angenehme Person",
+      27: "Sehr arrogante und schwierige Person",
+      28: "Tolle Zeit mit dieser Person, sehr empfehlenswert",
+      29: "Scheint unter Drogeneinfluss zu stehen, handelte nicht kohärent",
+    },
+    ru: {
+      1: "Хороший человек в целом (ничего странного)",
+      2: "Нервный человек, завершил свидание, но быстро ушёл",
+      3: "Кэтфиш - Фальшивые фото",
+      4: "Похоже, занимается каким-то мошенничеством",
+      5: "Похоже на эскорт или связан(а) с проституцией",
+      6: "Обокрал(а) меня или пытался(ась)",
+      7: "Пытался(ась) причинить мне физический или моральный вред",
+      8: "Наркодилер или связан с нелегальной деятельностью",
+      9: "Казался(ась) очень нуждающимся(ейся) и странным(ой)",
+      10: "Работает на государственное учреждение",
+      11: "Безденежный клоун, который беспокоит тебя поздно ночью",
+      12: "Солгал(а) о своём возрасте, и я отказал(а)",
+      13: "Очень вербально агрессивный(ая)",
+      14: "Не хочет проходить процесс верификации",
+      15: "Использует только неприемлемую или очень откровенную лексику",
+      16: "Неуместно отправляет фото интимных частей тела",
+      17: "Задаёт неуместные сексуальные вопросы с первого контакта",
+      18: "Не готов(а) покрывать базовые расходы на свидание",
+      19: "Предлагает только бюджетные или случайные места",
+      20: "Строит планы, но не выполняет их (Пустая трата времени)",
+      21: "Женат/замужем или в отношениях и хочет встречаться со мной",
+      22: "Не будет общаться ни с кем из их сообщества, они все грубые и необразованные",
+      23: "Ищет только интимный контент без намерения встретиться",
+      24: "Физически непривлекательный человек, но очень хороший",
+      25: "Физически неприятный, как и его/её личность",
+      26: "Очень сексуальный и приятный человек",
+      27: "Очень высокомерный и сложный человек",
+      28: "Отличное время с этим человеком, очень рекомендую",
+      29: "Похоже, под воздействием наркотиков, действовал(а) несвязно",
+    },
+    zh: {
+      1: "总体上是个好人（没什么奇怪的）",
+      2: "紧张的人，完成了约会但很快离开了",
+      3: "照骗 - 假照片",
+      4: "似乎在进行某种诈骗",
+      5: "似乎是陪侍或涉及卖淫",
+      6: "偷了我的东西或试图偷",
+      7: "试图对我造成身体或心理伤害",
+      8: "毒贩或参与非法活动",
+      9: "看起来非常需要关注且奇怪",
+      10: "在政府机构工作",
+      11: "深夜骚扰你的穷光蛋",
+      12: "关于法定年龄撒谎，我拒绝了他/她",
+      13: "言语上非常具有攻击性",
+      14: "不想通过验证过程",
+      15: "只使用不恰当或非常露骨的语言",
+      16: "不恰当地发送私密部位照片",
+      17: "从第一次接触就提出不恰当的性问题",
+      18: "不愿意承担基本的约会费用",
+      19: "只建议低预算或随意的地方",
+      20: "制定计划但不执行（浪费时间）",
+      21: "他/她已婚或有恋人但想和我约会",
+      22: "不会与他们社区的任何人互动，他们都很粗鲁无礼",
+      23: "只寻求亲密内容而无意见面",
+      24: "外表不吸引人，但人很好",
+      25: "外表令人不快，性格也是",
+      26: "非常性感和令人愉快的人",
+      27: "非常傲慢和难以相处的人",
+      28: "和这个人度过了美好时光，强烈推荐",
+      29: "似乎受到毒品影响，行为不连贯",
+    },
+  };
+
+  // Get preset text in user's language
+  const getPresetText = (presetId: number) => {
+    const langPresets = reviewPresetsTranslations[userLanguage] || reviewPresetsTranslations.en;
+    return langPresets[presetId] || `Report #${presetId}`;
   };
 
   // Detectar screenshot (limitado pero puede disuadir)
@@ -335,7 +570,7 @@ export default function VerifyPage() {
 
               <div className="mt-6 pt-4 border-t border-gray-100">
                 <p className="text-xs text-gray-400 text-center leading-relaxed">
-                  Tokens expire in 15 minutes and can only be used once.
+                  Tokens expire in 5 minutes and can only be used once.
                 </p>
               </div>
             </div>
@@ -457,15 +692,24 @@ export default function VerifyPage() {
                 </div>
               )}
 
-              {/* Teléfonos - Últimos 3, formato vertical */}
+              {/* Teléfonos - Últimos 3, formato vertical con fecha */}
               {profileData.numeros_telefono && profileData.numeros_telefono.length > 0 && (
                 <div className="bg-white/95 backdrop-blur rounded-2xl p-4 shadow-lg">
-                  <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Associated Numbers</h3>
+                  <div className="flex items-center justify-between mb-3">
+                    <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Associated Numbers</h3>
+                    {profileData.created_at && (
+                      <span className="text-[10px] text-gray-400">
+                        First reported: {new Date(profileData.created_at).toLocaleDateString()}
+                      </span>
+                    )}
+                  </div>
                   <div className="space-y-2">
                     {profileData.numeros_telefono.slice(-3).reverse().map((phone, idx) => (
                       <div key={idx} className="bg-gray-100 rounded-xl px-4 py-3 flex items-center justify-between">
                         <span className="font-mono text-sm text-gray-700">{formatPhonePartial(phone)}</span>
-                        <span className="text-[10px] text-gray-400">#{profileData.numeros_telefono.length - idx}</span>
+                        <div className="text-right">
+                          <span className="text-[10px] text-gray-400">#{profileData.numeros_telefono.length - idx}</span>
+                        </div>
                       </div>
                     ))}
                   </div>
@@ -520,11 +764,11 @@ export default function VerifyPage() {
                         {/* Contenido del reporte */}
                         <div className="ml-13 space-y-1">
                           <p className="text-gray-700 text-xs">
-                            • {reviewPresets[review.review_preset_1] || `Report #${review.review_preset_1}`}
+                            • {getPresetText(review.review_preset_1)}
                           </p>
                           {review.review_preset_2 && (
                             <p className="text-gray-700 text-xs">
-                              • {reviewPresets[review.review_preset_2] || `Report #${review.review_preset_2}`}
+                              • {getPresetText(review.review_preset_2)}
                             </p>
                           )}
                         </div>
