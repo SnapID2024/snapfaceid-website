@@ -28,6 +28,7 @@ interface TokenInfo {
   user_id: string;
   username: string;
   user_phone: string;
+  user_language: string;
   person_id: string;
   expires_at: string;
 }
@@ -216,14 +217,13 @@ export default function VerifyPage() {
     return presetAvatars[1]; // Default avatar
   };
 
-  // Detect user language
-  const [userLanguage, setUserLanguage] = useState<string>('en');
-
-  useEffect(() => {
-    const browserLang = navigator.language?.split('-')[0] || 'en';
+  // Get user language from token (set by the app user's preferences)
+  const getUserLanguage = () => {
+    if (!tokenInfo?.user_language) return 'en';
+    const lang = tokenInfo.user_language;
     const supportedLangs = ['en', 'es', 'fr', 'pt', 'it', 'de', 'ru', 'zh'];
-    setUserLanguage(supportedLangs.includes(browserLang) ? browserLang : 'en');
-  }, []);
+    return supportedLangs.includes(lang) ? lang : 'en';
+  };
 
   // Review presets translations - must match mobile app
   const reviewPresetsTranslations: { [lang: string]: { [key: number]: string } } = {
@@ -477,9 +477,10 @@ export default function VerifyPage() {
     },
   };
 
-  // Get preset text in user's language
+  // Get preset text in user's language (from app preferences)
   const getPresetText = (presetId: number) => {
-    const langPresets = reviewPresetsTranslations[userLanguage] || reviewPresetsTranslations.en;
+    const lang = getUserLanguage();
+    const langPresets = reviewPresetsTranslations[lang] || reviewPresetsTranslations.en;
     return langPresets[presetId] || `Report #${presetId}`;
   };
 

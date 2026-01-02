@@ -39,6 +39,7 @@ export async function POST(request: NextRequest) {
         user_id: data.user_id,
         username: data.username,
         user_phone: data.user_phone || '',
+        user_language: data.user_language || 'en',
         person_id: data.person_id,
         expires_at: data.expires_at,
       },
