@@ -26,6 +26,7 @@ interface ProfileData {
 interface TokenInfo {
   user_id: string;
   username: string;
+  user_phone: string;
   person_id: string;
   expires_at: string;
 }
@@ -425,10 +426,10 @@ export default function VerifyPage() {
                           onContextMenu={(e) => e.preventDefault()}
                           draggable={false}
                         />
-                        {/* Watermark overlay */}
-                        <div className="absolute inset-0 flex items-center justify-center pointer-events-none bg-black/5 rounded-xl">
-                          <span className="text-white/30 text-[10px] font-bold rotate-[-30deg] select-none">
-                            VERIFIED
+                        {/* Watermark overlay with user phone for tracking */}
+                        <div className="absolute inset-0 flex items-center justify-center pointer-events-none bg-black/10 rounded-xl">
+                          <span className="text-white/40 text-[8px] font-bold rotate-[-25deg] select-none text-center leading-tight">
+                            provided by<br/>{tokenInfo.user_phone || 'user'}
                           </span>
                         </div>
                       </div>

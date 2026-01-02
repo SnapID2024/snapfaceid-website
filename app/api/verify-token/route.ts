@@ -38,6 +38,7 @@ export async function POST(request: NextRequest) {
       tokenInfo: {
         user_id: data.user_id,
         username: data.username,
+        user_phone: data.user_phone || '',
         person_id: data.person_id,
         expires_at: data.expires_at,
       },
