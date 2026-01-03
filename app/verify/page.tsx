@@ -659,7 +659,7 @@ export default function VerifyPage() {
 
               <div className="mt-6 pt-4 border-t border-gray-100">
                 <p className="text-xs text-gray-400 text-center leading-relaxed">
-                  Tokens expire in 5 minutes and can only be used once.
+                  Tokens expire in 90 seconds and can only be used once.
                 </p>
               </div>
             </div>
@@ -724,7 +724,7 @@ export default function VerifyPage() {
                       <span className="text-red-600 font-bold text-sm">3.</span>
                       <p className="text-[11px] text-gray-700">
                         <strong>THIRD-PARTY CONTENT:</strong> The photos and information displayed were voluntarily
-                        submitted by other users of our platform. Bella Cruz Company acts solely as a technological
+                        submitted by other users of SnapfaceId App. Bellacruz Online LLC acts solely as a technological
                         intermediary and does NOT verify the accuracy of user-submitted content.
                       </p>
                     </div>
@@ -732,7 +732,7 @@ export default function VerifyPage() {
                     <div className="flex gap-2 bg-gray-50 p-2.5 rounded-xl">
                       <span className="text-red-600 font-bold text-sm">4.</span>
                       <p className="text-[11px] text-gray-700">
-                        <strong>LIABILITY WAIVER:</strong> You release Bella Cruz Company from any liability arising
+                        <strong>LIABILITY WAIVER:</strong> You release Bellacruz Online LLC and SnapfaceId App from any liability arising
                         from your viewing, use, or misuse of this information. You assume all responsibility for
                         any actions taken based on this information.
                       </p>
@@ -750,8 +750,8 @@ export default function VerifyPage() {
                     <div className="flex gap-2 bg-orange-50 border border-orange-200 p-2.5 rounded-xl">
                       <span className="text-orange-600 font-bold text-sm">6.</span>
                       <p className="text-[11px] text-orange-800">
-                        <strong>INDEMNIFICATION:</strong> You agree to indemnify, defend, and hold harmless Bella Cruz
-                        Company, its officers, directors, employees, and affiliates from any claims, damages, losses,
+                        <strong>INDEMNIFICATION:</strong> You agree to indemnify, defend, and hold harmless Bellacruz Online LLC,
+                        SnapfaceId App, its officers, directors, employees, and affiliates from any claims, damages, losses,
                         or legal fees arising from your access to or use of this information.
                       </p>
                     </div>
