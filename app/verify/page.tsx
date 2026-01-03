@@ -668,54 +668,115 @@ export default function VerifyPage() {
           {/* Estado: Acuerdo Legal */}
           {state === 'agreement' && tokenInfo && (
             <div className="bg-white/95 backdrop-blur rounded-3xl shadow-2xl flex-grow flex flex-col overflow-hidden">
-              <div className="bg-red-500 p-3">
+              <div className="bg-red-600 p-3">
                 <div className="flex items-center justify-center gap-2">
                   <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
                   </svg>
-                  <span className="font-bold text-white text-sm">Legal Agreement Required</span>
+                  <span className="font-bold text-white text-sm">BINDING LEGAL AGREEMENT</span>
                 </div>
               </div>
 
-              <div className="flex-grow overflow-auto p-5">
+              <div className="flex-grow overflow-auto p-4">
                 <div className="space-y-3 text-sm text-gray-600">
-                  <p className="text-gray-700 font-medium">
-                    By continuing you acknowledge:
+                  {/* Traceability Warning */}
+                  <div className="bg-red-50 border-2 border-red-300 rounded-xl p-3">
+                    <div className="flex items-start gap-2">
+                      <svg className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+                      </svg>
+                      <div>
+                        <p className="text-red-800 font-bold text-xs uppercase">Full Legal Traceability</p>
+                        <p className="text-red-700 text-[10px] mt-1">
+                          This access is permanently logged with your identity ({tokenInfo.user_phone || 'your phone'}),
+                          IP address, device information, and timestamp. This record is retained for 7 years and may be
+                          provided to law enforcement if any violation is detected.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <p className="text-gray-800 font-bold text-xs uppercase tracking-wide">
+                    By clicking "I Accept", you legally acknowledge and agree:
                   </p>
 
+                  {/* Legal Terms */}
                   <div className="space-y-2">
-                    <div className="flex gap-3 bg-gray-50 p-3 rounded-xl">
-                      <span className="text-red-500 font-bold">•</span>
-                      <p className="text-xs text-gray-600">You will NOT share, screenshot, or distribute this information.</p>
+                    <div className="flex gap-2 bg-gray-50 p-2.5 rounded-xl">
+                      <span className="text-red-600 font-bold text-sm">1.</span>
+                      <p className="text-[11px] text-gray-700">
+                        <strong>NO DISTRIBUTION:</strong> You will NOT share, screenshot, photograph, record, copy,
+                        distribute, or transmit any information displayed here by any means. Violation constitutes
+                        a breach of this agreement and applicable privacy laws.
+                      </p>
                     </div>
 
-                    <div className="flex gap-3 bg-gray-50 p-3 rounded-xl">
-                      <span className="text-red-500 font-bold">•</span>
-                      <p className="text-xs text-gray-600">For personal safety verification only. No harassment or illegal use.</p>
+                    <div className="flex gap-2 bg-gray-50 p-2.5 rounded-xl">
+                      <span className="text-red-600 font-bold text-sm">2.</span>
+                      <p className="text-[11px] text-gray-700">
+                        <strong>PERSONAL SAFETY ONLY:</strong> This information is provided exclusively for your
+                        personal safety verification before meeting someone. Any use for harassment, stalking,
+                        blackmail, extortion, or any illegal purpose is strictly prohibited.
+                      </p>
                     </div>
 
-                    <div className="flex gap-3 bg-gray-50 p-3 rounded-xl">
-                      <span className="text-red-500 font-bold">•</span>
-                      <p className="text-xs text-gray-600">Violations may result in legal prosecution.</p>
+                    <div className="flex gap-2 bg-gray-50 p-2.5 rounded-xl">
+                      <span className="text-red-600 font-bold text-sm">3.</span>
+                      <p className="text-[11px] text-gray-700">
+                        <strong>THIRD-PARTY CONTENT:</strong> The photos and information displayed were voluntarily
+                        submitted by other users of our platform. Bella Cruz Company acts solely as a technological
+                        intermediary and does NOT verify the accuracy of user-submitted content.
+                      </p>
                     </div>
 
-                    <div className="flex gap-3 bg-yellow-50 p-3 rounded-xl border border-yellow-200">
-                      <span className="text-yellow-600 font-bold">!</span>
-                      <p className="text-xs text-yellow-800">All activity is logged and tracked.</p>
+                    <div className="flex gap-2 bg-gray-50 p-2.5 rounded-xl">
+                      <span className="text-red-600 font-bold text-sm">4.</span>
+                      <p className="text-[11px] text-gray-700">
+                        <strong>LIABILITY WAIVER:</strong> You release Bella Cruz Company from any liability arising
+                        from your viewing, use, or misuse of this information. You assume all responsibility for
+                        any actions taken based on this information.
+                      </p>
                     </div>
+
+                    <div className="flex gap-2 bg-gray-50 p-2.5 rounded-xl">
+                      <span className="text-red-600 font-bold text-sm">5.</span>
+                      <p className="text-[11px] text-gray-700">
+                        <strong>LEGAL CONSEQUENCES:</strong> Misuse of this information may result in: (a) permanent
+                        ban from all services, (b) civil lawsuit for damages, (c) criminal prosecution under
+                        applicable federal and state privacy laws, (d) disclosure of your identity to affected parties.
+                      </p>
+                    </div>
+
+                    <div className="flex gap-2 bg-orange-50 border border-orange-200 p-2.5 rounded-xl">
+                      <span className="text-orange-600 font-bold text-sm">6.</span>
+                      <p className="text-[11px] text-orange-800">
+                        <strong>INDEMNIFICATION:</strong> You agree to indemnify, defend, and hold harmless Bella Cruz
+                        Company, its officers, directors, employees, and affiliates from any claims, damages, losses,
+                        or legal fees arising from your access to or use of this information.
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Final Warning */}
+                  <div className="bg-black text-white p-3 rounded-xl">
+                    <p className="text-[10px] text-center font-medium">
+                      YOUR PHONE NUMBER, IP ADDRESS, AND DEVICE ARE PERMANENTLY RECORDED.
+                      WATERMARKS ON PHOTOS IDENTIFY YOU AS THE RECIPIENT.
+                      ANY UNAUTHORIZED USE WILL BE PROSECUTED TO THE FULLEST EXTENT OF THE LAW.
+                    </p>
                   </div>
                 </div>
               </div>
 
-              <div className="p-4 border-t border-gray-100 bg-gray-50">
-                <div className="bg-red-100 rounded-xl p-3 mb-4">
+              <div className="p-4 border-t border-gray-200 bg-gray-100">
+                <div className="bg-red-100 rounded-xl p-2 mb-3">
                   <p className="text-red-800 text-center text-sm font-semibold">
                     Expires in {formatTime(timeRemaining)}
                   </p>
                 </div>
 
                 {error && (
-                  <div className="bg-red-50 border border-red-200 rounded-xl p-3 mb-4">
+                  <div className="bg-red-50 border border-red-200 rounded-xl p-3 mb-3">
                     <p className="text-red-600 text-center text-sm">{error}</p>
                   </div>
                 )}
@@ -727,18 +788,24 @@ export default function VerifyPage() {
                       setToken('');
                       setTokenInfo(null);
                     }}
-                    className="flex-1 bg-gray-200 hover:bg-gray-300 active:scale-[0.98] text-gray-700 py-4 rounded-2xl font-semibold transition-all"
+                    className="flex-1 bg-gray-300 hover:bg-gray-400 active:scale-[0.98] text-gray-700 py-3 rounded-2xl font-semibold transition-all text-sm"
                   >
-                    Cancel
+                    Decline
                   </button>
                   <button
                     onClick={handleAcceptAgreement}
                     disabled={loading}
-                    className="flex-1 bg-[#F59E0B] hover:bg-[#D97706] active:scale-[0.98] disabled:bg-gray-300 text-white py-4 rounded-2xl font-bold transition-all shadow-lg"
+                    className="flex-1 bg-red-600 hover:bg-red-700 active:scale-[0.98] disabled:bg-gray-300 text-white py-3 rounded-2xl font-bold transition-all shadow-lg text-sm"
                   >
-                    {loading ? 'Loading...' : 'I Agree'}
+                    {loading ? 'Loading...' : 'I Accept'}
                   </button>
                 </div>
+
+                <p className="text-[9px] text-gray-500 text-center mt-2">
+                  By clicking "I Accept" you confirm you have read and agree to the above terms and our{' '}
+                  <a href="/terms" target="_blank" className="underline">Terms of Service</a> and{' '}
+                  <a href="/privacy" target="_blank" className="underline">Privacy Policy</a>.
+                </p>
               </div>
             </div>
           )}
