@@ -302,7 +302,55 @@ WHEN UNINSTALLING THE APP:
     body: `These terms are governed by the laws of the State of Florida, United States. Any dispute will be resolved in Florida courts. By using this application, you consent to the exclusive jurisdiction of said courts.`,
   },
   {
-    title: '16. Contact',
+    title: '16. Tesla Model 3 Giveaway - Official Rules',
+    body: `OFFICIAL SWEEPSTAKES RULES
+
+SPONSOR: Bellacruz Online LLC ("SnapfaceID")
+
+ELIGIBILITY:
+• Open to legal residents of the United States who are 18 years or older
+• Must be a Premium subscriber at the time of the drawing
+• Employees of Bellacruz Online LLC and their immediate family members are not eligible
+• Void where prohibited by law
+
+NO PURCHASE NECESSARY:
+• Alternative method of entry available by sending a self-addressed stamped envelope to: Bellacruz Online LLC, Tesla Giveaway Entry, [Company Address]. One entry per envelope.
+• Premium subscription provides automatic entry but is not required to participate
+
+PRIZES:
+• Three (3) Tesla Model 3 vehicles (Standard Range Plus or equivalent)
+• Approximate Retail Value (ARV): $40,000 USD each
+• Total ARV of all prizes: $120,000 USD
+
+DRAWING:
+• Drawing will occur when SnapfaceID reaches 30,000 registered Premium users
+• If this threshold is not reached within 24 months from January 1, 2025, the drawing will occur on January 1, 2027
+• Winners will be selected at random from all eligible entries
+• Odds of winning depend on number of eligible entries received
+
+WINNER NOTIFICATION:
+• Winners will be notified via email and phone within 7 days of drawing
+• Winners must respond within 30 days to claim prize
+• Unclaimed prizes will be forfeited and re-drawn
+
+TAXES:
+• Winners are solely responsible for all federal, state, and local taxes
+• Winners will receive IRS Form 1099 for prize value
+• Prize may be subject to income tax withholding
+
+GENERAL CONDITIONS:
+• By participating, entrants agree to be bound by these Official Rules
+• Sponsor reserves the right to modify, suspend, or terminate the sweepstakes
+• Sponsor is not responsible for technical failures affecting entries
+• By accepting prize, winner grants Sponsor permission to use winner's name and likeness for promotional purposes without additional compensation
+
+PRIVACY:
+• Personal information collected for this sweepstakes will be used in accordance with our Privacy Policy
+
+For questions about the sweepstakes: bellacruzcompany@gmail.com`,
+  },
+  {
+    title: '17. Contact',
     body: `For questions, cancellations, or requests:
 
 BELLACRUZ ONLINE LLC
