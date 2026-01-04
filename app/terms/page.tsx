@@ -68,9 +68,9 @@ CONTENT RESPONSIBILITY:
     title: '6. User-Generated Content',
     body: `DISCLAIMER:
 
-Reports and comments on this platform are PERSONAL OPINIONS of individual users. Bella Cruz Company does NOT verify, endorse, or guarantee the accuracy of any report.
+Reports and comments on this platform are PERSONAL OPINIONS of individual users. Bellacruz Online LLC ("SnapfaceID") does NOT verify, endorse, or guarantee the accuracy of any report.
 
-Bella Cruz Company acts solely as a technological intermediary and is NOT responsible for:
+Bellacruz Online LLC ("SnapfaceID") acts solely as a technological intermediary and is NOT responsible for:
 • False or inaccurate information posted by users
 • Damages derived from decisions based on reports
 • Disputes between users or between users and reported persons
@@ -133,7 +133,7 @@ IMPORTANT:
     title: '9A. AUTHORIZATION TO CONTACT EMERGENCY SERVICES (911)',
     body: `IMPORTANT - PLEASE READ CAREFULLY:
 
-BY ACTIVATING THE GUARDIAN FEATURE AND SUBSCRIBING TO OUR PREMIUM SERVICE, YOU EXPRESSLY AND IRREVOCABLY AUTHORIZE BELLA CRUZ COMPANY ("SNAPFACEID") TO:
+BY ACTIVATING THE GUARDIAN FEATURE AND SUBSCRIBING TO OUR PREMIUM SERVICE, YOU EXPRESSLY AND IRREVOCABLY AUTHORIZE BELLACRUZ ONLINE LLC ("SNAPFACEID") TO:
 
 1. CONTACT EMERGENCY SERVICES ON YOUR BEHALF
 • Contact 911 or other emergency services in your jurisdiction if we reasonably believe you may be in imminent danger
@@ -154,7 +154,7 @@ LIMITATION OF LIABILITY FOR EMERGENCY SERVICES CONTACT:
 
 YOU EXPRESSLY ACKNOWLEDGE AND AGREE THAT:
 
-• Bella Cruz Company SHALL NOT BE LIABLE for any consequences, damages, costs, expenses, legal fees, fines, or penalties arising from our contact with emergency services on your behalf, including but not limited to:
+• Bellacruz Online LLC ("SnapfaceID") SHALL NOT BE LIABLE for any consequences, damages, costs, expenses, legal fees, fines, or penalties arising from our contact with emergency services on your behalf, including but not limited to:
   - False alarms or unnecessary emergency responses
   - Delayed or failed communication with emergency services
   - Inaccurate location data transmitted to authorities
@@ -169,7 +169,7 @@ YOU EXPRESSLY ACKNOWLEDGE AND AGREE THAT:
   - Any legal consequences resulting from false or misleading information
   - Any costs associated with emergency response to false alarms
 
-• IN NO EVENT shall Bella Cruz Company be liable for any failure to contact emergency services, delays in contacting emergency services, or any harm that occurs regardless of whether emergency services were contacted
+• IN NO EVENT shall Bellacruz Online LLC ("SnapfaceID") be liable for any failure to contact emergency services, delays in contacting emergency services, or any harm that occurs regardless of whether emergency services were contacted
 
 USER ACKNOWLEDGMENTS:
 
@@ -178,19 +178,63 @@ By using the Guardian feature, you acknowledge and agree that:
 ✓ You grant express consent and authorization for us to contact 911 on your behalf
 ✓ You understand that emergency services may be dispatched to your location
 ✓ You accept full financial responsibility for any false alarm fees or penalties
-✓ You release and hold harmless Bella Cruz Company from any liability related to emergency services contact
+✓ You release and hold harmless Bellacruz Online LLC ("SnapfaceID") from any liability related to emergency services contact
 ✓ You understand this authorization cannot be revoked once Guardian is activated for a session
 ✓ You confirm that all information provided is accurate and truthful
 ✓ You understand that communication failures may occur and we are not liable for such failures
 
 INDEMNIFICATION:
 
-You agree to INDEMNIFY, DEFEND, and HOLD HARMLESS Bella Cruz Company, its officers, directors, employees, agents, and affiliates from and against any and all claims, damages, losses, costs, and expenses (including reasonable attorney fees) arising from or related to:
+You agree to INDEMNIFY, DEFEND, and HOLD HARMLESS Bellacruz Online LLC ("SnapfaceID"), its officers, directors, employees, agents, and affiliates from and against any and all claims, damages, losses, costs, and expenses (including reasonable attorney fees) arising from or related to:
 • Our contact with emergency services on your behalf
 • Any false alarm or unnecessary emergency response
 • Inaccurate information you provided
 • Your use or misuse of the Guardian feature
 • Any violation of these terms`,
+  },
+  {
+    title: '9B. AUTHORIZATION TO CONTACT YOUR DATE',
+    body: `IMPORTANT - PLEASE READ CAREFULLY:
+
+BY PROVIDING THE PHONE NUMBER OF THE PERSON YOU ARE MEETING ("YOUR DATE") IN THE GUARDIAN FEATURE, YOU EXPRESSLY AND IRREVOCABLY AUTHORIZE BELLACRUZ ONLINE LLC ("SNAPFACEID") TO:
+
+1. CONTACT YOUR DATE DIRECTLY
+• Send SMS/MMS messages to your date's phone number in emergency situations
+• Call your date's phone number to verify your safety status
+• Share limited information about the emergency situation with your date
+
+2. CIRCUMSTANCES FOR CONTACT
+We may contact your date when:
+• You trigger an emergency alert manually
+• You fail to complete a safety check-in within the designated time
+• Law enforcement or emergency services request we contact your date
+• We reasonably believe contacting your date may help ensure your safety or locate you
+
+3. INFORMATION SHARED WITH YOUR DATE
+When contacting your date, we may share:
+• Notification that an emergency has been triggered
+• Request for confirmation of your current safety status
+• Basic information about the Guardian safety feature
+• Contact information for emergency services if appropriate
+
+4. PURPOSE AND LIMITATIONS
+• Contact with your date is EXCLUSIVELY for safety verification and emergency response
+• We will NOT share your personal details, photos, or location with your date
+• We will NOT contact your date for any marketing, promotional, or non-safety purposes
+
+LIABILITY DISCLAIMER:
+
+YOU EXPRESSLY ACKNOWLEDGE AND AGREE THAT:
+• Bellacruz Online LLC ("SnapfaceID") SHALL NOT BE LIABLE for any consequences arising from our contact with your date
+• This includes any impact on your relationship, reputation, or personal situation
+• You assume full responsibility for providing accurate contact information
+• You confirm that contacting this person in an emergency is appropriate and desired
+
+By using Guardian and providing your date's phone number, you confirm that:
+✓ You consent to us contacting your date in emergency situations
+✓ You understand your date may be contacted if you miss check-ins or trigger alerts
+✓ You accept responsibility for any consequences of this contact
+✓ You confirm the phone number provided belongs to the actual person you are meeting`,
   },
   {
     title: '10. Third-Party Services',
@@ -207,7 +251,7 @@ Each provider has its own privacy policy. By using our application, you also acc
     title: '11. Limitation of Liability',
     body: `TO THE MAXIMUM EXTENT PERMITTED BY LAW:
 
-• Bella Cruz Company does NOT guarantee the safety of any encounter
+• Bellacruz Online LLC ("SnapfaceID") does NOT guarantee the safety of any encounter
 • We do NOT verify the identity of users or reported persons
 • We are NOT responsible for encounters that result in physical, emotional, or financial harm
 • We do NOT guarantee continuous availability of the service
@@ -215,7 +259,7 @@ Each provider has its own privacy policy. By using our application, you also acc
 
 YOU ASSUME ALL RISK associated with encounters organized after using this application.
 
-INDEMNIFICATION: You agree to indemnify and hold harmless Bella Cruz Company, its directors, employees, and affiliates, from any claim, demand, damage, or expense (including legal fees) resulting from your use of the platform or content you post.`,
+INDEMNIFICATION: You agree to indemnify and hold harmless Bellacruz Online LLC ("SnapfaceID"), its directors, employees, and affiliates, from any claim, demand, damage, or expense (including legal fees) resulting from your use of the platform or content you post.`,
   },
   {
     title: '12. Age Restrictions',
@@ -279,7 +323,7 @@ const FINAL_NOTE = `By pressing 'Accept and Pay' or by registering, you confirm 
 ✓ You understand that uninstalling the app results in loss of account and subscription
 ✓ You assume all responsibility for the content you post`;
 
-const LAST_UPDATED = '2025-12-17';
+const LAST_UPDATED = '2026-01-04';
 
 export default function TermsPage() {
   return (

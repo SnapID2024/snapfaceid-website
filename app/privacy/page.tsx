@@ -2,7 +2,7 @@ import React from 'react';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
 
-const LAST_UPDATED = '2025-12-17';
+const LAST_UPDATED = '2026-01-04';
 
 export default function PrivacyPage() {
   return (
@@ -64,6 +64,53 @@ export default function PrivacyPage() {
               <p className="text-gray-700 leading-relaxed">
                 SMS/MMS delivery is provided by Twilio. To deliver messages, we share the destination phone number and
                 the message content/media link with Twilio.
+              </p>
+            </section>
+
+            <section className="bg-white rounded-2xl p-6 md:p-8 shadow-sm space-y-4">
+              <h2 className="text-xl md:text-2xl font-bold text-gray-900">Authorization to Contact Emergency Services (911)</h2>
+              <p className="text-gray-700 leading-relaxed">
+                By using the Guardian feature, you expressly authorize BELLACRUZ ONLINE LLC to contact emergency services (911) on your behalf if:
+              </p>
+              <ul className="text-gray-700 list-disc list-inside space-y-1">
+                <li>You fail to respond to safety check-in notifications within the designated time period</li>
+                <li>You manually trigger an emergency alert</li>
+                <li>We reasonably believe you may be in imminent danger</li>
+              </ul>
+              <p className="text-gray-700 leading-relaxed mt-3">
+                When contacting emergency services, we may share your personal information including: real-time or last known GPS coordinates, photographs of you and/or your date, contact information, and any other relevant information collected through the Guardian feature.
+              </p>
+            </section>
+
+            <section className="bg-white rounded-2xl p-6 md:p-8 shadow-sm space-y-4">
+              <h2 className="text-xl md:text-2xl font-bold text-gray-900">Authorization to Contact Your Emergency Contacts</h2>
+              <p className="text-gray-700 leading-relaxed">
+                By designating an emergency contact in the Guardian feature, you expressly authorize BELLACRUZ ONLINE LLC to contact that person via SMS/MMS in emergency situations. The information shared with your emergency contact may include:
+              </p>
+              <ul className="text-gray-700 list-disc list-inside space-y-1">
+                <li>Your identification selfie</li>
+                <li>Your last known location/address</li>
+                <li>Phone number and photo of your date (if provided)</li>
+                <li>Emergency flyer with relevant details</li>
+              </ul>
+              <p className="text-gray-700 leading-relaxed mt-3">
+                You confirm that you have obtained prior consent from your emergency contact to receive these safety alerts on your behalf.
+              </p>
+            </section>
+
+            <section className="bg-white rounded-2xl p-6 md:p-8 shadow-sm space-y-4">
+              <h2 className="text-xl md:text-2xl font-bold text-gray-900">Authorization to Contact Your Date</h2>
+              <p className="text-gray-700 leading-relaxed">
+                By providing the phone number of the person you are meeting (your "date") in the Guardian feature, you expressly authorize BELLACRUZ ONLINE LLC to contact that person in the following circumstances:
+              </p>
+              <ul className="text-gray-700 list-disc list-inside space-y-1">
+                <li>When you trigger an emergency alert</li>
+                <li>When you fail to complete a safety check-in</li>
+                <li>When law enforcement or emergency services request contact information</li>
+                <li>When we reasonably believe contacting your date may help ensure your safety</li>
+              </ul>
+              <p className="text-gray-700 leading-relaxed mt-3">
+                The purpose of contacting your date is exclusively for safety verification and emergency response. We may share limited information with your date, such as notifying them of an emergency situation or requesting confirmation of your safety status.
               </p>
             </section>
 

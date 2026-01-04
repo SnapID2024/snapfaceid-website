@@ -3,7 +3,7 @@ import Link from 'next/link';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
 
-const LAST_UPDATED = '2025-12-23';
+const LAST_UPDATED = '2026-01-04';
 
 const SAMPLE_MESSAGE = `SnapfaceID Guardian Alert: <USER_NAME> may be in danger. Last location: <ADDRESS>. Date phone: <DATE_PHONE>. Flyer: <FLYER_URL>. If urgent, call 911. Reply STOP to opt out, HELP for help.`;
 
@@ -91,6 +91,46 @@ export default function SmsConsentPage() {
                 Messages are sent <strong>only</strong> to a <strong>user-designated emergency contact</strong> whose phone number
                 is provided by the user inside the app. The user must confirm they have obtained consent from their emergency
                 contact before adding their number.
+              </p>
+            </section>
+
+            <section className="bg-red-50 border-2 border-red-200 rounded-2xl p-6 md:p-8 shadow-sm space-y-4">
+              <h2 className="text-xl md:text-2xl font-bold text-red-900">Authorization to Contact Emergency Services (911)</h2>
+              <p className="text-gray-700 leading-relaxed">
+                By using the Guardian feature, you <strong>expressly authorize</strong> BELLACRUZ ONLINE LLC to contact emergency services (911) on your behalf in the following situations:
+              </p>
+              <ul className="text-gray-700 list-disc list-inside space-y-1">
+                <li>You fail to respond to safety check-in notifications within the designated time</li>
+                <li>You manually trigger an emergency alert</li>
+                <li>We reasonably believe you may be in imminent danger</li>
+              </ul>
+              <p className="text-gray-700 leading-relaxed mt-3">
+                When contacting 911, we may share your location, photographs, date information, and any other relevant data collected through Guardian.
+              </p>
+              <div className="bg-red-100 border-l-4 border-red-500 p-4 mt-4">
+                <p className="text-red-800 text-sm">
+                  <strong>Important:</strong> You accept full responsibility for any false alarm fees or penalties. See our{' '}
+                  <Link className="text-red-700 underline font-medium" href="/terms">Terms of Service</Link> for complete liability terms.
+                </p>
+              </div>
+            </section>
+
+            <section className="bg-orange-50 border-2 border-orange-200 rounded-2xl p-6 md:p-8 shadow-sm space-y-4">
+              <h2 className="text-xl md:text-2xl font-bold text-orange-900">Authorization to Contact Your Date</h2>
+              <p className="text-gray-700 leading-relaxed">
+                By providing the phone number of the person you are meeting (&quot;your date&quot;) in Guardian, you <strong>expressly authorize</strong> BELLACRUZ ONLINE LLC to contact that person via SMS or phone call in emergency situations.
+              </p>
+              <p className="text-gray-700 leading-relaxed">
+                <strong>When we may contact your date:</strong>
+              </p>
+              <ul className="text-gray-700 list-disc list-inside space-y-1">
+                <li>When you trigger an emergency alert</li>
+                <li>When you fail to complete a safety check-in</li>
+                <li>When law enforcement requests contact information</li>
+                <li>When we believe contacting your date may help ensure your safety</li>
+              </ul>
+              <p className="text-gray-700 leading-relaxed mt-3">
+                <strong>What we may share with your date:</strong> Only emergency notification and request for safety status confirmation. We will NOT share your photos, location, or personal details with your date.
               </p>
             </section>
 
