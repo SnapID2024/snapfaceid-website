@@ -241,31 +241,34 @@ export default function UsersProblemsPage() {
 
       {/* Tabs */}
       <div className="max-w-7xl mx-auto px-4">
-        <div className="flex gap-1 border-b border-gray-700">
+        <div className="flex gap-2 py-2">
           {[
-            { id: 'emergency', label: 'Emergency Exits', color: 'red', count: data?.stats.totalEmergencyExits },
-            { id: 'upgraded', label: 'Upgrades', color: 'green', count: data?.stats.totalUpgrades },
-            { id: 'logout', label: 'Logouts', color: 'blue', count: data?.stats.totalLogouts },
-            { id: 'downgraded', label: 'Downgrades', color: 'orange', count: data?.stats.totalDowngrades },
-            { id: 'inactive', label: 'Inactive', color: 'gray', count: data?.stats.totalInactive },
+            { id: 'emergency', label: 'Emergency Exits', icon: '🚨', count: data?.stats.totalEmergencyExits },
+            { id: 'upgraded', label: 'Upgrades', icon: '⬆️', count: data?.stats.totalUpgrades },
+            { id: 'logout', label: 'Logouts', icon: '🚪', count: data?.stats.totalLogouts },
+            { id: 'downgraded', label: 'Downgrades', icon: '⬇️', count: data?.stats.totalDowngrades },
+            { id: 'inactive', label: 'Inactive', icon: '💤', count: data?.stats.totalInactive },
           ].map((tab) => (
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id as TabType)}
-              className={`px-4 py-2.5 text-sm font-medium transition-all border-b-2 -mb-px ${
+              className={`px-4 py-2.5 text-sm font-medium rounded-lg transition-all border-2 ${
                 activeTab === tab.id
-                  ? `text-white border-${tab.color}-500 bg-gray-800`
-                  : 'text-gray-400 border-transparent hover:text-gray-200 hover:bg-gray-800/50'
+                  ? 'bg-purple-600 border-purple-600 text-white shadow-lg shadow-purple-600/30'
+                  : 'bg-transparent border-gray-600 text-gray-400 hover:border-gray-500 hover:text-gray-300'
               }`}
             >
-              {tab.label}
-              {tab.count !== undefined && tab.count > 0 && (
-                <span className={`ml-2 px-1.5 py-0.5 text-xs rounded ${
-                  activeTab === tab.id ? 'bg-gray-600' : 'bg-gray-700'
-                }`}>
-                  {tab.count}
-                </span>
-              )}
+              <span className="flex items-center gap-2">
+                <span>{tab.icon}</span>
+                {tab.label}
+                {tab.count !== undefined && tab.count > 0 && (
+                  <span className={`px-1.5 py-0.5 text-xs rounded ${
+                    activeTab === tab.id ? 'bg-purple-500' : 'bg-gray-700'
+                  }`}>
+                    {tab.count}
+                  </span>
+                )}
+              </span>
             </button>
           ))}
         </div>
