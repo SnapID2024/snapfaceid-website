@@ -241,34 +241,31 @@ export default function UsersProblemsPage() {
 
       {/* Tabs */}
       <div className="max-w-7xl mx-auto px-4">
-        <div className="flex gap-2 py-2">
+        <div className="flex gap-2 py-3">
           {[
-            { id: 'emergency', label: 'Emergency Exits', icon: '🚨', count: data?.stats.totalEmergencyExits },
-            { id: 'upgraded', label: 'Upgrades', icon: '⬆️', count: data?.stats.totalUpgrades },
-            { id: 'logout', label: 'Logouts', icon: '🚪', count: data?.stats.totalLogouts },
-            { id: 'downgraded', label: 'Downgrades', icon: '⬇️', count: data?.stats.totalDowngrades },
-            { id: 'inactive', label: 'Inactive', icon: '💤', count: data?.stats.totalInactive },
+            { id: 'emergency', label: 'Emergency Exits', count: data?.stats.totalEmergencyExits },
+            { id: 'upgraded', label: 'Upgrades', count: data?.stats.totalUpgrades },
+            { id: 'logout', label: 'Logouts', count: data?.stats.totalLogouts },
+            { id: 'downgraded', label: 'Downgrades', count: data?.stats.totalDowngrades },
+            { id: 'inactive', label: 'Inactive', count: data?.stats.totalInactive },
           ].map((tab) => (
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id as TabType)}
-              className={`px-4 py-2.5 text-sm font-medium rounded-lg transition-all border-2 ${
+              className={`px-5 py-2.5 text-sm font-semibold rounded-lg transition-all border-2 ${
                 activeTab === tab.id
-                  ? 'bg-purple-600 border-purple-600 text-white shadow-lg shadow-purple-600/30'
-                  : 'bg-transparent border-gray-600 text-gray-400 hover:border-gray-500 hover:text-gray-300'
+                  ? 'bg-[#6A1B9A] border-[#6A1B9A] text-white shadow-lg shadow-purple-900/40'
+                  : 'bg-gray-800 border-gray-600 text-gray-400 hover:border-gray-500 hover:text-gray-200'
               }`}
             >
-              <span className="flex items-center gap-2">
-                <span>{tab.icon}</span>
-                {tab.label}
-                {tab.count !== undefined && tab.count > 0 && (
-                  <span className={`px-1.5 py-0.5 text-xs rounded ${
-                    activeTab === tab.id ? 'bg-purple-500' : 'bg-gray-700'
-                  }`}>
-                    {tab.count}
-                  </span>
-                )}
-              </span>
+              {tab.label}
+              {tab.count !== undefined && tab.count > 0 && (
+                <span className={`ml-2 px-2 py-0.5 text-xs rounded-full ${
+                  activeTab === tab.id ? 'bg-white/20' : 'bg-gray-700'
+                }`}>
+                  {tab.count}
+                </span>
+              )}
             </button>
           ))}
         </div>
