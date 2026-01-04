@@ -34,7 +34,7 @@ interface Alert {
   dateLocation: string;   // Combinado para compatibilidad
   activatedAt: string;
   lastCheckIn: string;
-  status: 'active' | 'no_response' | 'safe' | 'emergency';
+  status: 'active' | 'no_response' | 'safe' | 'emergency' | 'panic';
   flyerUrl?: string;
   emergencyContactPhone?: string;
   emergencyContactName?: string;
@@ -90,7 +90,7 @@ interface AdvertiserMessage {
   active: boolean;
 }
 
-type FilterType = 'all' | 'active' | 'no_response' | 'emergency' | 'safe';
+type FilterType = 'all' | 'active' | 'no_response' | 'emergency' | 'panic' | 'safe';
 
 // Función para obtener el color y texto del estado
 const getStatusDisplay = (status: Alert['status']) => {
@@ -101,6 +101,8 @@ const getStatusDisplay = (status: Alert['status']) => {
       return { color: 'bg-orange-500 animate-pulse', text: 'No Response', textColor: 'text-orange-700', bgLight: 'bg-orange-100' };
     case 'emergency':
       return { color: 'bg-red-600 animate-pulse', text: 'EMERGENCY', textColor: 'text-red-700', bgLight: 'bg-red-100' };
+    case 'panic':
+      return { color: 'bg-yellow-400 animate-pulse', text: '🆘 PANIC', textColor: 'text-yellow-800', bgLight: 'bg-yellow-100' };
     case 'safe':
       return { color: 'bg-blue-500', text: 'Safe', textColor: 'text-blue-700', bgLight: 'bg-blue-100' };
     default:
@@ -458,6 +460,8 @@ export default function AdminDashboard() {
         return <span className={`${baseClasses} bg-orange-100 text-orange-700 animate-pulse`}>No Response</span>;
       case 'emergency':
         return <span className={`${baseClasses} bg-red-600 text-white animate-pulse`}>EMERGENCY</span>;
+      case 'panic':
+        return <span className={`${baseClasses} bg-yellow-400 text-yellow-900 animate-pulse font-bold`}>🆘 PANIC</span>;
       case 'safe':
         return <span className={`${baseClasses} bg-blue-100 text-blue-700`}>Safe</span>;
       default:
@@ -750,6 +754,7 @@ export default function AdminDashboard() {
     active: alerts.filter((a) => a.status === 'active').length,
     no_response: alerts.filter((a) => a.status === 'no_response').length,
     emergency: alerts.filter((a) => a.status === 'emergency').length,
+    panic: alerts.filter((a) => a.status === 'panic').length,
     safe: alerts.filter((a) => a.status === 'safe').length,
   };
 
@@ -1106,7 +1111,7 @@ Please respond immediately.`;
                 <svg className="h-5 w-5 text-orange-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
                 </svg>
-                <span className="font-semibold">{alertCounts.active + alertCounts.no_response + alertCounts.emergency}</span>
+                <span className="font-semibold">{alertCounts.active + alertCounts.no_response + alertCounts.emergency + alertCounts.panic}</span>
                 <span className="text-white/70 text-sm hidden sm:inline">Active Alerts</span>
               </div>
 
@@ -1131,9 +1136,10 @@ Please respond immediately.`;
             <svg className="h-5 w-5 text-gray-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
             </svg>
-            {(['all', 'active', 'no_response', 'emergency', 'safe'] as FilterType[]).map((f) => {
+            {(['all', 'active', 'no_response', 'emergency', 'panic', 'safe'] as FilterType[]).map((f) => {
               const displayName = f === 'all' ? 'All Alerts' :
                                   f === 'no_response' ? 'No Response' :
+                                  f === 'panic' ? '🆘 PANIC' :
                                   f.charAt(0).toUpperCase() + f.slice(1);
               return (
                 <button
@@ -1934,6 +1940,16 @@ Please respond immediately.`;
                         icon: (
                           <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                          </svg>
+                        ),
+                      };
+                    case 'panic':
+                      return {
+                        bg: 'bg-yellow-400',
+                        text: '🆘 PANIC - USER CALLING 911',
+                        icon: (
+                          <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
                           </svg>
                         ),
                       };
