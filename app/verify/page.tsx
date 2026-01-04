@@ -72,6 +72,7 @@ export default function VerifyPage() {
   const [tokenInfo, setTokenInfo] = useState<TokenInfo | null>(null);
   const [profileData, setProfileData] = useState<ProfileData | null>(null);
   const [timeRemaining, setTimeRemaining] = useState<number>(0);
+  const [expirationTimestamp, setExpirationTimestamp] = useState<number | null>(null);
 
   // Verificar token
   const handleVerifyToken = async () => {
@@ -140,24 +141,53 @@ export default function VerifyPage() {
     }
   };
 
-  // Countdown timer
+  // Countdown timer - usa timestamps para funcionar incluso cuando el tab está en background
   const startCountdown = (seconds: number) => {
+    const expiration = Date.now() + (seconds * 1000);
+    setExpirationTimestamp(expiration);
     setTimeRemaining(seconds);
-    const interval = setInterval(() => {
-      setTimeRemaining((prev) => {
-        if (prev <= 1) {
-          clearInterval(interval);
-          // Expirado - volver al inicio
-          setState('input');
-          setToken('');
-          setProfileData(null);
-          setTokenInfo(null);
-          return 0;
-        }
-        return prev - 1;
-      });
-    }, 1000);
   };
+
+  // Efecto para el countdown basado en timestamp
+  useEffect(() => {
+    if (!expirationTimestamp) return;
+
+    const updateCountdown = () => {
+      const now = Date.now();
+      const remaining = Math.max(0, Math.ceil((expirationTimestamp - now) / 1000));
+
+      if (remaining <= 0) {
+        // Expirado - volver al inicio
+        setState('input');
+        setToken('');
+        setProfileData(null);
+        setTokenInfo(null);
+        setExpirationTimestamp(null);
+        setTimeRemaining(0);
+      } else {
+        setTimeRemaining(remaining);
+      }
+    };
+
+    // Actualizar inmediatamente
+    updateCountdown();
+
+    // Actualizar cada segundo
+    const interval = setInterval(updateCountdown, 1000);
+
+    // También actualizar cuando el tab vuelve a estar visible
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        updateCountdown();
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [expirationTimestamp]);
 
   // Formatear tiempo restante
   const formatTime = (seconds: number) => {
