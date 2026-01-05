@@ -91,7 +91,8 @@ export default function TrustedValidationPage() {
   const formatDate = (dateStr: string | null) => {
     if (!dateStr) return '—';
     const date = new Date(dateStr);
-    return date.toLocaleDateString('en-US', {
+    return date.toLocaleString('en-US', {
+      timeZone: 'America/New_York',
       month: 'short',
       day: 'numeric',
       year: 'numeric',
