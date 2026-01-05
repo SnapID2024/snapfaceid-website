@@ -303,7 +303,7 @@ export default function UsersProblemsPage() {
                   <th className="px-4 py-3 text-xs font-semibold text-gray-300 uppercase tracking-wider w-40">User</th>
                   <th className="px-4 py-3 text-xs font-semibold text-gray-300 uppercase tracking-wider w-36">Phone</th>
                   <th className="px-4 py-3 text-xs font-semibold text-gray-300 uppercase tracking-wider w-40">Date Info</th>
-                  <th className="px-4 py-3 text-xs font-semibold text-gray-300 uppercase tracking-wider">Location</th>
+                  <th className="px-4 py-3 text-xs font-semibold text-gray-300 uppercase tracking-wider min-w-[200px]">Location</th>
                   <th className="px-4 py-3 text-xs font-semibold text-gray-300 uppercase tracking-wider w-40">Emergency Contact</th>
                   <th className="px-4 py-3 text-xs font-semibold text-gray-300 uppercase tracking-wider w-32 text-right">Time</th>
                 </tr>
@@ -343,8 +343,10 @@ export default function UsersProblemsPage() {
                         <div className="text-sm text-white">{truncateText(exit.dateName, 15)}</div>
                         <div className="text-xs text-gray-500 font-mono">{exit.datePhone || '—'}</div>
                       </td>
-                      <td className="px-4 py-3">
-                        <div className="text-sm text-gray-300">{truncateText(exit.address || exit.locationType, 30)}</div>
+                      <td className="px-4 py-3 max-w-xs">
+                        <div className="text-sm text-gray-300 break-words" title={exit.address || exit.locationType}>
+                          {exit.address || exit.locationType || '—'}
+                        </div>
                         {exit.address && exit.locationType && (
                           <div className="text-xs text-gray-500">{exit.locationType}</div>
                         )}

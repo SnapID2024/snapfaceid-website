@@ -1217,6 +1217,16 @@ Please respond immediately.`;
               </svg>
               Verification
             </a>
+            {/* Trusted Validation Tab - Link to trusted validation logs */}
+            <a
+              href="/admin/trusted-validation"
+              className="px-4 py-2 rounded-lg font-medium text-sm whitespace-nowrap transition-all flex items-center gap-2 bg-gray-100 text-gray-600 hover:bg-gray-200"
+            >
+              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              Trusted Validation
+            </a>
           </div>
         </div>
       </div>
