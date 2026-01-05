@@ -22,7 +22,7 @@ interface Alert {
   dateLocation: string;
   activatedAt: string;
   lastCheckIn: string;
-  status: 'active' | 'no_response' | 'safe' | 'emergency';
+  status: 'active' | 'no_response' | 'safe' | 'emergency' | 'panic';
   flyerUrl?: string;
   emergencyContactPhone?: string;
   emergencyContactName?: string;
