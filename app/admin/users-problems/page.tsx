@@ -172,7 +172,7 @@ export default function UsersProblemsPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-900">
+    <div className="min-h-screen bg-gray-800">
       {/* Header */}
       <header className="bg-gray-800 border-b border-gray-700 sticky top-0 z-10">
         <div className="max-w-7xl mx-auto px-4 py-3">
@@ -211,15 +211,15 @@ export default function UsersProblemsPage() {
         <div className="max-w-7xl mx-auto px-4 py-4">
           <div className="grid grid-cols-5 gap-3">
             {[
-              { label: 'Emergency', value: data.stats.totalEmergencyExits, color: 'red', icon: '🚨' },
-              { label: 'Upgrades', value: data.stats.totalUpgrades, color: 'green', icon: '⬆️' },
-              { label: 'Logouts', value: data.stats.totalLogouts, color: 'blue', icon: '🚪' },
-              { label: 'Downgrades', value: data.stats.totalDowngrades, color: 'orange', icon: '⬇️' },
-              { label: 'Inactive 7d+', value: data.stats.totalInactive, color: 'gray', icon: '💤' },
+              { label: 'Emergency', value: data.stats.totalEmergencyExits, color: 'red' },
+              { label: 'Upgrades', value: data.stats.totalUpgrades, color: 'green' },
+              { label: 'Logouts', value: data.stats.totalLogouts, color: 'blue' },
+              { label: 'Downgrades', value: data.stats.totalDowngrades, color: 'orange' },
+              { label: 'Inactive 7d+', value: data.stats.totalInactive, color: 'gray' },
             ].map((stat) => (
               <div
                 key={stat.label}
-                className={`bg-gray-800 rounded-lg p-3 border-l-4 ${
+                className={`bg-gray-700 rounded-lg p-3 border-l-4 ${
                   stat.color === 'red' ? 'border-red-500' :
                   stat.color === 'green' ? 'border-green-500' :
                   stat.color === 'blue' ? 'border-blue-500' :
@@ -227,12 +227,9 @@ export default function UsersProblemsPage() {
                   'border-gray-500'
                 }`}
               >
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-2xl font-bold text-white">{stat.value}</p>
-                    <p className="text-xs text-gray-400 uppercase tracking-wide">{stat.label}</p>
-                  </div>
-                  <span className="text-2xl opacity-50">{stat.icon}</span>
+                <div>
+                  <p className="text-2xl font-bold text-white">{stat.value}</p>
+                  <p className="text-xs text-gray-400 uppercase tracking-wide">{stat.label}</p>
                 </div>
               </div>
             ))}
@@ -328,8 +325,8 @@ export default function UsersProblemsPage() {
                             EMERGENCY
                           </span>
                         ) : (
-                          <span className="px-2 py-1 rounded text-xs font-medium bg-gray-600 text-gray-200">
-                            Safe by Contact
+                          <span className="px-2 py-1 rounded text-xs font-medium bg-gray-600 text-gray-200 whitespace-nowrap">
+                            Safe
                           </span>
                         )}
                       </td>
