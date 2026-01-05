@@ -286,6 +286,9 @@ export default function AdminDashboard() {
     total: number;
   } | null>(null);
 
+  // Estado para contador de complaints pendientes
+  const [pendingComplaintsCount, setPendingComplaintsCount] = useState(0);
+
   // Lista de países con banderas y códigos
   const countryCodes = [
     { code: '+1', flag: '🇺🇸', name: 'USA' },
@@ -444,6 +447,34 @@ export default function AdminDashboard() {
       document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
   }, [router, fetchAlerts, alerts.length, hasOfflineDevices]);
+
+  // Fetch pending complaints count
+  useEffect(() => {
+    const fetchComplaintsCount = async () => {
+      const token = localStorage.getItem('adminToken');
+      if (!token) return;
+
+      try {
+        const response = await fetch('/api/admin/complaints?status=pending&count_only=true', {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+          },
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          setPendingComplaintsCount(data.count || 0);
+        }
+      } catch (err) {
+        console.error('Error fetching complaints count:', err);
+      }
+    };
+
+    fetchComplaintsCount();
+    // Refresh every 30 seconds
+    const interval = setInterval(fetchComplaintsCount, 30000);
+    return () => clearInterval(interval);
+  }, []);
 
   const handleLogout = () => {
     localStorage.removeItem('adminToken');
@@ -1132,110 +1163,101 @@ Please respond immediately.`;
       {/* Filter Tabs */}
       <div className="bg-white border-b">
         <div className="max-w-full mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center gap-2 py-3 overflow-x-auto">
-            <svg className="h-5 w-5 text-gray-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <div className="flex items-center gap-1 py-2 flex-wrap">
+            <svg className="h-4 w-4 text-gray-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
             </svg>
             {(['all', 'active', 'no_response', 'emergency', 'panic', 'safe'] as FilterType[]).map((f) => {
-              const displayName = f === 'all' ? 'All Alerts' :
-                                  f === 'no_response' ? 'No Response' :
-                                  f === 'panic' ? '🆘 PANIC' :
+              const displayName = f === 'all' ? 'All' :
+                                  f === 'no_response' ? 'No Resp' :
+                                  f === 'panic' ? '🆘' :
                                   f.charAt(0).toUpperCase() + f.slice(1);
               return (
                 <button
                   key={f}
                   onClick={() => { setFilter(f); setShowHistory(false); setShowAdvertiser(false); setShowPushNotifications(false); }}
-                  className={`px-4 py-2 rounded-lg font-medium text-sm whitespace-nowrap transition-all ${
+                  className={`px-2 py-1 rounded-md font-medium text-xs whitespace-nowrap transition-all ${
                     filter === f && !showHistory && !showAdvertiser && !showPushNotifications ? 'bg-[#6A1B9A] text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                   }`}
                 >
                   {displayName}
-                  <span className={`ml-2 px-2 py-0.5 rounded-full text-xs ${filter === f && !showHistory && !showAdvertiser && !showPushNotifications ? 'bg-white/20' : 'bg-gray-200'}`}>
+                  <span className={`ml-1 px-1.5 py-0.5 rounded-full text-xs ${filter === f && !showHistory && !showAdvertiser && !showPushNotifications ? 'bg-white/20' : 'bg-gray-200'}`}>
                     {alertCounts[f]}
                   </span>
                 </button>
               );
             })}
             {/* Separator */}
-            <div className="w-px h-8 bg-gray-300 mx-2" />
+            <div className="w-px h-6 bg-gray-300 mx-1" />
             {/* History Tab */}
             <button
               onClick={handleShowHistory}
-              className={`px-4 py-2 rounded-lg font-medium text-sm whitespace-nowrap transition-all flex items-center gap-2 ${
+              className={`px-2 py-1 rounded-md font-medium text-xs whitespace-nowrap transition-all flex items-center gap-1 ${
                 showHistory && !showAdvertiser && !showPushNotifications ? 'bg-[#6A1B9A] text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
               }`}
             >
-              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
               History
-              <span className={`px-2 py-0.5 rounded-full text-xs ${showHistory && !showAdvertiser && !showPushNotifications ? 'bg-white/20' : 'bg-gray-200'}`}>
+              <span className={`px-1 py-0.5 rounded-full text-xs ${showHistory && !showAdvertiser && !showPushNotifications ? 'bg-white/20' : 'bg-gray-200'}`}>
                 90d
               </span>
             </button>
             {/* Advertiser Tab */}
             <button
               onClick={handleShowAdvertiser}
-              className={`px-4 py-2 rounded-lg font-medium text-sm whitespace-nowrap transition-all flex items-center gap-2 ${
+              className={`px-2 py-1 rounded-md font-medium text-xs whitespace-nowrap transition-all ${
                 showAdvertiser ? 'bg-[#6A1B9A] text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
               }`}
             >
-              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z" />
-              </svg>
-              Advertiser
+              Ads
             </button>
             {/* Push Notifications Tab */}
             <button
               onClick={handleShowPushNotifications}
-              className={`px-4 py-2 rounded-lg font-medium text-sm whitespace-nowrap transition-all flex items-center gap-2 ${
+              className={`px-2 py-1 rounded-md font-medium text-xs whitespace-nowrap transition-all ${
                 showPushNotifications ? 'bg-[#6A1B9A] text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
               }`}
             >
-              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
-              </svg>
-              Push Notifications
+              Push
             </button>
             {/* Problemas/Users Tab - Link to separate page */}
             <a
               href="/admin/users-problems"
-              className="px-4 py-2 rounded-lg font-medium text-sm whitespace-nowrap transition-all flex items-center gap-2 bg-gray-100 text-gray-600 hover:bg-gray-200"
+              className="px-2 py-1 rounded-md font-medium text-xs whitespace-nowrap transition-all bg-gray-100 text-gray-600 hover:bg-gray-200"
             >
-              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
-              </svg>
-              Problemas/Users
+              Users
             </a>
             {/* Verification Tab - Link to verification logs */}
             <a
               href="/admin/verification"
-              className="px-4 py-2 rounded-lg font-medium text-sm whitespace-nowrap transition-all flex items-center gap-2 bg-gray-100 text-gray-600 hover:bg-gray-200"
+              className="px-2 py-1 rounded-md font-medium text-xs whitespace-nowrap transition-all bg-gray-100 text-gray-600 hover:bg-gray-200"
             >
-              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-              </svg>
-              Verification
+              Verify
             </a>
             {/* Trusted Validation Tab - Link to trusted validation logs */}
             <a
               href="/admin/trusted-validation"
-              className="px-4 py-2 rounded-lg font-medium text-sm whitespace-nowrap transition-all flex items-center gap-2 bg-gray-100 text-gray-600 hover:bg-gray-200"
+              className="px-2 py-1 rounded-md font-medium text-xs whitespace-nowrap transition-all bg-gray-100 text-gray-600 hover:bg-gray-200"
             >
-              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-              Trusted Validation
+              Trusted
             </a>
             {/* Geofence Tab - Link to geofence management */}
             <a
               href="/admin/geofence"
-              className="px-4 py-2 rounded-lg font-medium text-sm whitespace-nowrap transition-all flex items-center gap-2 bg-purple-100 text-purple-700 hover:bg-purple-200"
+              className="px-2 py-1 rounded-md font-medium text-xs whitespace-nowrap transition-all bg-purple-100 text-purple-700 hover:bg-purple-200"
             >
-              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
               Geofence
+            </a>
+            {/* Complaints Tab - Link to complaints management */}
+            <a
+              href="/admin/complaints"
+              className="relative px-2 py-1 rounded-md font-medium text-xs whitespace-nowrap transition-all bg-gray-100 text-gray-600 hover:bg-gray-200"
+            >
+              Complaints
+              {pendingComplaintsCount > 0 && (
+                <span className="absolute -top-2 -right-2 bg-yellow-400 text-yellow-900 text-[10px] font-bold rounded-full h-5 w-5 flex items-center justify-center shadow-sm">
+                  {pendingComplaintsCount > 99 ? '99+' : pendingComplaintsCount}
+                </span>
+              )}
             </a>
           </div>
         </div>
