@@ -91,7 +91,9 @@ export default function TrustedValidationPage() {
 
   const formatDate = (dateStr: string | null) => {
     if (!dateStr) return '—';
-    const date = new Date(dateStr);
+    // Append 'Z' if no timezone indicator, so JS parses as UTC
+    const utcDateStr = dateStr.includes('Z') || dateStr.includes('+') ? dateStr : dateStr + 'Z';
+    const date = new Date(utcDateStr);
     return date.toLocaleString('en-US', {
       timeZone: 'America/New_York',
       month: 'short',
