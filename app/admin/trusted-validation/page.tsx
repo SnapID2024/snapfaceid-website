@@ -112,6 +112,8 @@ export default function TrustedValidationPage() {
         return <span className="px-2 py-1 rounded text-xs font-medium bg-red-600/30 text-red-400">Failed</span>;
       case 'blocked':
         return <span className="px-2 py-1 rounded text-xs font-medium bg-gray-600 text-gray-300">Blocked</span>;
+      case 'revoked':
+        return <span className="px-2 py-1 rounded text-xs font-medium bg-orange-600/30 text-orange-400">Revoked</span>;
       default:
         return <span className="px-2 py-1 rounded text-xs font-medium bg-gray-600 text-gray-400">{status}</span>;
     }
@@ -160,13 +162,14 @@ export default function TrustedValidationPage() {
       {/* Stats Cards */}
       {data && (
         <div className="max-w-7xl mx-auto px-4 py-4">
-          <div className="grid grid-cols-5 gap-3">
+          <div className="grid grid-cols-6 gap-3">
             {[
               { label: 'Pending', value: data.stats.pending, color: 'yellow', filter: 'pending' },
               { label: 'Code Sent', value: data.stats.codeSent, color: 'blue', filter: 'code_sent' },
               { label: 'Verified', value: data.stats.verified, color: 'green', filter: 'verified' },
               { label: 'Failed', value: data.stats.failed, color: 'red', filter: 'failed' },
               { label: 'Blocked', value: data.stats.blocked, color: 'gray', filter: 'blocked' },
+              { label: 'Revoked', value: data.stats.revoked || 0, color: 'orange', filter: 'revoked' },
             ].map((stat) => (
               <button
                 key={stat.label}
@@ -176,6 +179,7 @@ export default function TrustedValidationPage() {
                   stat.color === 'blue' ? 'border-blue-500' :
                   stat.color === 'green' ? 'border-green-500' :
                   stat.color === 'red' ? 'border-red-500' :
+                  stat.color === 'orange' ? 'border-orange-500' :
                   'border-gray-500'
                 } ${activeFilter === stat.filter ? 'ring-2 ring-purple-500' : ''}`}
               >
