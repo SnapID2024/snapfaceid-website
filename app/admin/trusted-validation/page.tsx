@@ -33,6 +33,7 @@ interface TrustedValidationData {
     verified: number;
     failed: number;
     blocked: number;
+    revoked: number;
   };
 }
 
