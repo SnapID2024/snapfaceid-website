@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-const BACKEND_API_URL = process.env.BACKEND_API_URL || 'https://api-sports-bellacruz.ngrok.pro';
+const BACKEND_API_URL = process.env.BACKEND_API_URL || 'https://api.snapfaceid.com';
 
 // Verificar token de admin
 function validateAdminToken(token: string | null | undefined): boolean {
