@@ -6,13 +6,25 @@ import Link from 'next/link';
 
 const LOGO_URL = 'https://d64gsuwffb70l.cloudfront.net/6834a8f25630f332851529fb_1765418801539_cd77434c.png';
 
+interface ReportedReviewContent {
+  review_id: string;
+  preset_1_text: string | null;
+  preset_2_text: string | null;
+  review_type: string;
+  author_username: string;
+  location: string;
+  created_at: string;
+}
+
 interface Complaint {
   complaint_id: string;
   user_id: string;
   user_phone: string;
   user_name: string;
   person_id: string;
+  person_phone: string;
   review_ids: string[];
+  reported_reviews_content: ReportedReviewContent[];
   reason: string;
   report_type: 'free' | 'priority';
   status: 'pending' | 'in_review' | 'approved' | 'rejected';
@@ -437,13 +449,46 @@ export default function ComplaintsPage() {
               {/* Reviews */}
               <div className="bg-gray-700/50 rounded-lg p-4">
                 <h3 className="text-sm font-semibold text-gray-300 mb-2">Reported Reviews</h3>
-                <p className="text-sm text-gray-400">Person ID: {selectedComplaint.person_id}</p>
-                <div className="mt-2 flex flex-wrap gap-2">
-                  {selectedComplaint.review_ids?.map((id, idx) => (
-                    <span key={id} className="text-xs bg-gray-600 text-gray-300 px-2 py-1 rounded">
-                      Review {idx + 1}: {id.substring(0, 8)}...
+                <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-gray-400 mb-3">
+                  <span>Person ID: <span className="text-gray-300">{selectedComplaint.person_id}</span></span>
+                  {selectedComplaint.person_phone && (
+                    <span>
+                      Phone: <a href={`tel:${selectedComplaint.person_phone}`} className="text-purple-400 hover:text-purple-300">{selectedComplaint.person_phone}</a>
                     </span>
-                  ))}
+                  )}
+                </div>
+
+                {/* Actual Review Content */}
+                <div className="space-y-3">
+                  {selectedComplaint.reported_reviews_content?.length > 0 ? (
+                    selectedComplaint.reported_reviews_content.map((review, idx) => (
+                      <div key={review.review_id} className="bg-gray-600/50 rounded-lg p-3">
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="text-xs text-purple-400 font-medium">
+                            Review {idx + 1} - {review.review_type === 'inperson' ? 'En Persona' : 'Remota'}
+                          </span>
+                          <span className="text-xs text-gray-500">by {review.author_username}</span>
+                        </div>
+                        <div className="space-y-1">
+                          {review.preset_1_text && (
+                            <p className="text-sm text-white">{review.preset_1_text}</p>
+                          )}
+                          {review.preset_2_text && (
+                            <p className="text-sm text-white">{review.preset_2_text}</p>
+                          )}
+                        </div>
+                        {review.location && (
+                          <p className="text-xs text-gray-500 mt-2">📍 {review.location}</p>
+                        )}
+                      </div>
+                    ))
+                  ) : (
+                    <div className="text-sm text-gray-500 italic">
+                      {selectedComplaint.review_ids?.map((id, idx) => (
+                        <span key={id} className="block">Review {idx + 1}: {id.substring(0, 12)}...</span>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </div>
 
