@@ -37,6 +37,8 @@ export default function ComplaintsPage() {
   const [selectedComplaint, setSelectedComplaint] = useState<Complaint | null>(null);
   const [adminNotes, setAdminNotes] = useState('');
   const [isUpdating, setIsUpdating] = useState(false);
+  const [isSavingNotes, setIsSavingNotes] = useState(false);
+  const [notesSaved, setNotesSaved] = useState(false);
 
   const fetchComplaints = useCallback(async (token: string, showLoading = true) => {
     if (showLoading) setIsLoading(true);
@@ -177,10 +179,49 @@ export default function ComplaintsPage() {
       await fetchComplaints(token, false);
       setSelectedComplaint(null);
       setAdminNotes('');
+      setNotesSaved(false);
     } catch (err) {
       alert(err instanceof Error ? err.message : 'Error updating complaint');
     } finally {
       setIsUpdating(false);
+    }
+  };
+
+  const handleSaveNotes = async (complaintId: string) => {
+    const token = localStorage.getItem('adminToken');
+    if (!token) return;
+
+    setIsSavingNotes(true);
+    try {
+      const response = await fetch(`/api/admin/complaints/${complaintId}`, {
+        method: 'PATCH',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          admin_notes: adminNotes,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to save notes');
+      }
+
+      setNotesSaved(true);
+      // Update the selected complaint with new notes
+      if (selectedComplaint) {
+        setSelectedComplaint({ ...selectedComplaint, admin_notes: adminNotes });
+      }
+      // Refresh the list in background
+      await fetchComplaints(token, false);
+
+      // Reset saved indicator after 2 seconds
+      setTimeout(() => setNotesSaved(false), 2000);
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Error saving notes');
+    } finally {
+      setIsSavingNotes(false);
     }
   };
 
@@ -429,11 +470,33 @@ export default function ComplaintsPage() {
 
               {/* Admin Notes */}
               <div>
-                <label className="text-sm font-semibold text-gray-300 mb-2 block">Admin Notes</label>
+                <div className="flex items-center justify-between mb-2">
+                  <label className="text-sm font-semibold text-gray-300">Admin Notes</label>
+                  <div className="flex items-center gap-2">
+                    {notesSaved && (
+                      <span className="text-xs text-green-400 flex items-center gap-1">
+                        <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                        </svg>
+                        Saved
+                      </span>
+                    )}
+                    <button
+                      onClick={() => handleSaveNotes(selectedComplaint.complaint_id)}
+                      disabled={isSavingNotes || adminNotes === (selectedComplaint.admin_notes || '')}
+                      className="text-xs bg-gray-600 hover:bg-gray-500 text-white px-3 py-1 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {isSavingNotes ? 'Saving...' : 'Save Notes'}
+                    </button>
+                  </div>
+                </div>
                 <textarea
                   value={adminNotes}
-                  onChange={(e) => setAdminNotes(e.target.value)}
-                  placeholder="Add notes about this complaint..."
+                  onChange={(e) => {
+                    setAdminNotes(e.target.value);
+                    setNotesSaved(false);
+                  }}
+                  placeholder="Add notes about this complaint for future reference..."
                   className="w-full bg-gray-700 text-white rounded-lg p-3 text-sm border border-gray-600 focus:border-purple-500 focus:outline-none"
                   rows={3}
                 />

@@ -54,3 +54,43 @@ export async function PUT(
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
+
+export async function PATCH(
+  request: NextRequest,
+  { params }: { params: Promise<{ complaint_id: string }> }
+) {
+  const authHeader = request.headers.get('Authorization');
+  if (!authHeader?.startsWith('Bearer ')) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
+  const token = authHeader.replace('Bearer ', '');
+  if (!validateAdminToken(token)) {
+    return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
+  }
+
+  try {
+    const { complaint_id } = await params;
+    const body = await request.json();
+
+    const response = await fetch(`${BACKEND_API_URL}/api/admin/complaints/${complaint_id}/notes`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      return NextResponse.json(
+        { error: data.detail || 'Failed to save notes' },
+        { status: response.status }
+      );
+    }
+
+    return NextResponse.json(data);
+  } catch (error) {
+    console.error('Error saving notes:', error);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+  }
+}
