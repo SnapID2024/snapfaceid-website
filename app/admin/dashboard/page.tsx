@@ -1259,6 +1259,13 @@ Please respond immediately.`;
                 </span>
               )}
             </a>
+            {/* Frontend Logs Tab - Debug logs from mobile app */}
+            <a
+              href="/admin/frontend-logs"
+              className="px-2 py-1 rounded-md font-medium text-xs whitespace-nowrap transition-all bg-orange-100 text-orange-700 hover:bg-orange-200"
+            >
+              App Logs
+            </a>
           </div>
         </div>
       </div>
