@@ -137,10 +137,17 @@ export default function ComplaintsPage() {
   };
 
   const getVerificationBadge = (complaint: Complaint) => {
-    if (complaint.report_type === 'priority') {
+    if (complaint.report_type === 'priority' && complaint.identity_verified) {
       return (
         <span className="px-2 py-0.5 text-xs font-medium rounded-full bg-green-500/20 text-green-400">
-          Paid (Verified)
+          Paid + ID Verified
+        </span>
+      );
+    }
+    if (complaint.report_type === 'priority') {
+      return (
+        <span className="px-2 py-0.5 text-xs font-medium rounded-full bg-purple-500/20 text-purple-400">
+          Paid (Awaiting ID)
         </span>
       );
     }
@@ -148,6 +155,20 @@ export default function ComplaintsPage() {
       return (
         <span className="px-2 py-0.5 text-xs font-medium rounded-full bg-green-500/20 text-green-400">
           ID Verified
+        </span>
+      );
+    }
+    if (complaint.stripe_verification_status === 'failed') {
+      return (
+        <span className="px-2 py-0.5 text-xs font-medium rounded-full bg-red-500/20 text-red-400">
+          Verification Failed
+        </span>
+      );
+    }
+    if (complaint.stripe_verification_status === 'requires_input') {
+      return (
+        <span className="px-2 py-0.5 text-xs font-medium rounded-full bg-yellow-500/20 text-yellow-400">
+          Needs Retry
         </span>
       );
     }
