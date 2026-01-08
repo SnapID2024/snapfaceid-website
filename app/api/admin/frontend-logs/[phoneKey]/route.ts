@@ -18,8 +18,10 @@ function validateAdminToken(token: string | null | undefined): boolean {
 // GET /api/admin/frontend-logs/[phoneKey] - Get logs for a specific phone
 export async function GET(
   request: NextRequest,
-  { params }: { params: { phoneKey: string } }
+  { params }: { params: Promise<{ phoneKey: string }> }
 ) {
+  const { phoneKey } = await params;
+
   const authHeader = request.headers.get('Authorization');
   if (!authHeader?.startsWith('Bearer ')) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -35,7 +37,7 @@ export async function GET(
     const level = searchParams.get('level');
     const limit = searchParams.get('limit') || '100';
 
-    let url = `${BACKEND_API_URL}/api/frontend-logs/${params.phoneKey}?limit=${limit}`;
+    let url = `${BACKEND_API_URL}/api/frontend-logs/${phoneKey}?limit=${limit}`;
     if (level) url += `&level=${level}`;
 
     const response = await fetch(url, {
@@ -62,8 +64,10 @@ export async function GET(
 // DELETE /api/admin/frontend-logs/[phoneKey] - Clear logs for a specific phone
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { phoneKey: string } }
+  { params }: { params: Promise<{ phoneKey: string }> }
 ) {
+  const { phoneKey } = await params;
+
   const authHeader = request.headers.get('Authorization');
   if (!authHeader?.startsWith('Bearer ')) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -75,7 +79,7 @@ export async function DELETE(
   }
 
   try {
-    const response = await fetch(`${BACKEND_API_URL}/api/frontend-logs/${params.phoneKey}`, {
+    const response = await fetch(`${BACKEND_API_URL}/api/frontend-logs/${phoneKey}`, {
       method: 'DELETE',
       headers: { 'Content-Type': 'application/json' },
     });
