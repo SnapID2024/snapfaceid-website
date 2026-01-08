@@ -5,7 +5,6 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 
 const LOGO_URL = 'https://d64gsuwffb70l.cloudfront.net/6834a8f25630f332851529fb_1765418801539_cd77434c.png';
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://mi-app-backend-production.up.railway.app';
 
 interface PhoneEntry {
   phone_key: string;
@@ -41,11 +40,27 @@ export default function FrontendLogsPage() {
   const [isClearing, setIsClearing] = useState(false);
   const [autoRefresh, setAutoRefresh] = useState(false);
 
+  // Get admin token from localStorage
+  const getToken = () => localStorage.getItem('adminToken');
+
   // Fetch list of phones that have logs
   const fetchPhones = useCallback(async () => {
+    const token = getToken();
+    if (!token) {
+      router.push('/admin');
+      return;
+    }
+
     setIsLoadingPhones(true);
     try {
-      const response = await fetch(`${API_URL}/api/frontend-logs/phones`);
+      const response = await fetch('/api/admin/frontend-logs', {
+        headers: { 'Authorization': `Bearer ${token}` },
+      });
+      if (response.status === 401) {
+        localStorage.removeItem('adminToken');
+        router.push('/admin');
+        return;
+      }
       if (!response.ok) throw new Error('Failed to fetch phones');
       const data = await response.json();
       setPhones(data.phones || []);
@@ -54,14 +69,19 @@ export default function FrontendLogsPage() {
     } finally {
       setIsLoadingPhones(false);
     }
-  }, []);
+  }, [router]);
 
   // Fetch logs for selected phone
   const fetchLogs = useCallback(async (phoneKey: string) => {
+    const token = getToken();
+    if (!token) return;
+
     setIsLoadingLogs(true);
     try {
       const levelParam = filterLevel !== 'all' ? `?level=${filterLevel}` : '';
-      const response = await fetch(`${API_URL}/api/frontend-logs/${phoneKey}${levelParam}`);
+      const response = await fetch(`/api/admin/frontend-logs/${phoneKey}${levelParam}`, {
+        headers: { 'Authorization': `Bearer ${token}` },
+      });
       if (!response.ok) throw new Error('Failed to fetch logs');
       const data = await response.json();
       setLogs(data.logs || []);
@@ -74,11 +94,15 @@ export default function FrontendLogsPage() {
 
   // Clear logs for a phone
   const clearLogs = async (phoneKey: string) => {
+    const token = getToken();
+    if (!token) return;
+
     if (!confirm(`Are you sure you want to clear all logs for ${phoneKey}?`)) return;
     setIsClearing(true);
     try {
-      const response = await fetch(`${API_URL}/api/frontend-logs/${phoneKey}`, {
+      const response = await fetch(`/api/admin/frontend-logs/${phoneKey}`, {
         method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${token}` },
       });
       if (!response.ok) throw new Error('Failed to clear logs');
       setLogs([]);
