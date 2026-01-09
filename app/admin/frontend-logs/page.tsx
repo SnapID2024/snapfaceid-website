@@ -141,13 +141,21 @@ export default function FrontendLogsPage() {
   }, [autoRefresh, selectedPhone, fetchLogs]);
 
   const formatTimestamp = (timestamp: string) => {
-    const date = new Date(timestamp);
+    // Parse timestamp - if it doesn't have timezone info, treat as UTC
+    let date = new Date(timestamp);
+
+    // If the timestamp doesn't end with 'Z' or timezone offset, append 'Z' to treat as UTC
+    if (!timestamp.endsWith('Z') && !timestamp.match(/[+-]\d{2}:\d{2}$/)) {
+      date = new Date(timestamp + 'Z');
+    }
+
     return date.toLocaleString('en-US', {
       month: 'short',
       day: 'numeric',
       hour: '2-digit',
       minute: '2-digit',
       second: '2-digit',
+      hour12: true,
     });
   };
 
