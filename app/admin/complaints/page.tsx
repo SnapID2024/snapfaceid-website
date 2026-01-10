@@ -12,6 +12,8 @@ interface ReportedReviewContent {
   preset_2_text: string | null;
   review_type: string;
   author_username: string;
+  author_uid: string;
+  author_phone: string;
   location: string;
   created_at: string;
 }
@@ -488,7 +490,14 @@ export default function ComplaintsPage() {
                           <span className="text-xs text-purple-400 font-medium">
                             Review {idx + 1} - {review.review_type === 'inperson' ? 'En Persona' : 'Remota'}
                           </span>
-                          <span className="text-xs text-gray-500">by {review.author_username}</span>
+                          <div className="text-right">
+                            <span className="text-xs text-gray-400 block">by {review.author_username}</span>
+                            {review.author_phone && (
+                              <a href={`tel:${review.author_phone}`} className="text-xs text-purple-400 hover:text-purple-300">
+                                {review.author_phone}
+                              </a>
+                            )}
+                          </div>
                         </div>
                         <div className="space-y-1">
                           {review.preset_1_text && (
