@@ -455,7 +455,7 @@ export default function AdminDashboard() {
       if (!token) return;
 
       try {
-        const response = await fetch('/api/admin/complaints?status=pending&count_only=true', {
+        const response = await fetch('/api/admin/complaints?status=pending_action&count_only=true', {
           headers: {
             'Authorization': `Bearer ${token}`,
           },
