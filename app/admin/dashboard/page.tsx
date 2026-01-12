@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import dynamic from 'next/dynamic';
 
@@ -289,6 +289,13 @@ export default function AdminDashboard() {
   // Estado para contador de complaints pendientes
   const [pendingComplaintsCount, setPendingComplaintsCount] = useState(0);
 
+  // === PANIC ALERT SOUND ===
+  // Refs para detectar nuevas alertas de pánico y reproducir sonido
+  const previousPanicAlertIdsRef = useRef<Set<string>>(new Set());
+  const panicAudioRef = useRef<HTMLAudioElement | null>(null);
+  const panicSoundTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const [isPanicSoundPlaying, setIsPanicSoundPlaying] = useState(false);
+
   // Lista de países con banderas y códigos
   const countryCodes = [
     { code: '+1', flag: '🇺🇸', name: 'USA' },
@@ -447,6 +454,88 @@ export default function AdminDashboard() {
       document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
   }, [router, fetchAlerts, alerts.length, hasOfflineDevices]);
+
+  // === PANIC ALERT SOUND EFFECT ===
+  // Detectar nuevas alertas de pánico y reproducir sonido agudo por 30 segundos
+  useEffect(() => {
+    // Obtener todas las alertas de pánico actuales
+    const currentPanicAlerts = alerts.filter(a => a.status === 'panic');
+    const currentPanicIds = new Set(currentPanicAlerts.map(a => a.id));
+
+    // Buscar alertas de pánico NUEVAS (no vistas antes)
+    const newPanicAlerts = currentPanicAlerts.filter(
+      a => !previousPanicAlertIdsRef.current.has(a.id)
+    );
+
+    // Si hay nuevas alertas de pánico, reproducir sonido
+    if (newPanicAlerts.length > 0 && !isPanicSoundPlaying) {
+      console.log('🆘 NUEVA ALERTA DE PÁNICO DETECTADA:', newPanicAlerts.map(a => a.userName));
+
+      // Crear y reproducir audio
+      if (!panicAudioRef.current) {
+        // Usar Web Audio API para generar un tono agudo de alarma
+        const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+        const oscillator = audioContext.createOscillator();
+        const gainNode = audioContext.createGain();
+
+        oscillator.connect(gainNode);
+        gainNode.connect(audioContext.destination);
+
+        // Tono agudo alternante (tipo sirena)
+        oscillator.type = 'square';
+        oscillator.frequency.setValueAtTime(880, audioContext.currentTime); // A5
+
+        // Modular la frecuencia para efecto de sirena
+        const modulateFrequency = () => {
+          if (!isPanicSoundPlaying) return;
+          oscillator.frequency.setValueAtTime(880, audioContext.currentTime);
+          oscillator.frequency.linearRampToValueAtTime(1320, audioContext.currentTime + 0.5);
+          oscillator.frequency.linearRampToValueAtTime(880, audioContext.currentTime + 1);
+        };
+
+        // Volumen
+        gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+
+        oscillator.start();
+        setIsPanicSoundPlaying(true);
+
+        // Modular frecuencia cada segundo
+        const modulationInterval = setInterval(modulateFrequency, 1000);
+
+        // Detener después de 30 segundos
+        panicSoundTimeoutRef.current = setTimeout(() => {
+          oscillator.stop();
+          audioContext.close();
+          clearInterval(modulationInterval);
+          setIsPanicSoundPlaying(false);
+          console.log('🔇 Sonido de pánico detenido después de 30 segundos');
+        }, 30000);
+
+        // Guardar referencia para limpieza
+        (panicAudioRef.current as any) = { oscillator, audioContext, modulationInterval };
+      }
+    }
+
+    // Actualizar los IDs de pánico conocidos
+    previousPanicAlertIdsRef.current = currentPanicIds;
+
+    // Cleanup cuando el componente se desmonte
+    return () => {
+      if (panicSoundTimeoutRef.current) {
+        clearTimeout(panicSoundTimeoutRef.current);
+      }
+      if (panicAudioRef.current) {
+        try {
+          const audioState = panicAudioRef.current as any;
+          if (audioState.oscillator) audioState.oscillator.stop();
+          if (audioState.audioContext) audioState.audioContext.close();
+          if (audioState.modulationInterval) clearInterval(audioState.modulationInterval);
+        } catch (e) {
+          // Ignorar errores de limpieza
+        }
+      }
+    };
+  }, [alerts, isPanicSoundPlaying]);
 
   // Fetch pending complaints count
   useEffect(() => {
@@ -2359,26 +2448,15 @@ Please respond immediately.`;
                   )}
 
                   {selectedAlert.emergencyContactPhone && (
-                    <div className="flex items-center gap-1">
-                      <button
-                        onClick={() => openCallModal('emergency_contact', selectedAlert.emergencyContactPhone!, selectedAlert.emergencyContactName || 'Emergency Contact')}
-                        className="flex items-center gap-2 bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded-l-lg font-medium transition-colors"
-                      >
-                        <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
-                        </svg>
-                        Call Emergency Contact
-                      </button>
-                      <button
-                        onClick={() => setShowEmergencyContact(!showEmergencyContact)}
-                        className={`p-2 rounded-r-lg transition-colors ${showEmergencyContact ? 'bg-orange-600 text-white' : 'bg-orange-400 hover:bg-orange-500 text-white'}`}
-                        title="View contact info"
-                      >
-                        <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                        </svg>
-                      </button>
-                    </div>
+                    <button
+                      onClick={() => openCallModal('emergency_contact', selectedAlert.emergencyContactPhone!, selectedAlert.emergencyContactName || 'Emergency Contact')}
+                      className="flex items-center gap-2 bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded-lg font-medium transition-colors"
+                    >
+                      <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+                      </svg>
+                      Call Emergency Contact
+                    </button>
                   )}
 
                   <button
