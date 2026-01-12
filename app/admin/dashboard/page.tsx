@@ -3,8 +3,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import dynamic from 'next/dynamic';
-import { db } from '@/lib/firebase';
-import { collection, query, orderBy, limit, onSnapshot } from 'firebase/firestore';
 
 // Dynamic import for Leaflet map (client-side only)
 const GuardianMap = dynamic(() => import('@/app/components/GuardianMap'), {
@@ -877,63 +875,62 @@ export default function AdminDashboard() {
     setLiveTrackingLocations([]);
   };
 
-  // Firestore onSnapshot subscription for live tracking
+  // Polling to backend for live tracking (avoids Firebase Auth requirement)
   useEffect(() => {
-    if (!liveTrackingSessionId || !showLiveTracking || !db) {
+    if (!liveTrackingSessionId || !showLiveTracking) {
       return;
     }
 
-    // Subscribe to the locations subcollection
-    // Backend stores: lat, lng, ts, ts_unix (use ts_unix for stable ordering)
-    console.log('🔍 Subscribing to live tracking for session:', liveTrackingSessionId);
-    const locationsRef = collection(db, 'GuardianSessions', liveTrackingSessionId, 'locations');
-    const locationsQuery = query(locationsRef, orderBy('ts_unix', 'desc'), limit(200));
+    const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://mi-app-backend-production-b5fa.up.railway.app';
 
-    // Timeout fallback: stop loading after 5s even if no data arrives
-    // This prevents infinite spinner if there's a permission error or no docs
-    const timeoutId = setTimeout(() => {
-      console.log('⏱️ Live tracking timeout - stopping loader');
-      setLiveTrackingLoading(false);
-    }, 5000);
+    const fetchLocations = async () => {
+      try {
+        console.log('🔍 Fetching live tracking for session:', liveTrackingSessionId);
+        const response = await fetch(
+          `${API_URL}/admin/guardian-locations?session_id=${encodeURIComponent(liveTrackingSessionId)}&limit=200`
+        );
 
-    const unsubscribe = onSnapshot(
-      locationsQuery,
-      (snapshot) => {
-        clearTimeout(timeoutId);
-        const rawLocations = snapshot.docs.map(doc => {
-          const data = doc.data() as { lat?: number; lng?: number; ts?: { toDate?: () => Date } | string; accuracy?: number; source?: string };
-          const timestamp = data.ts && typeof data.ts === 'object' && 'toDate' in data.ts
-            ? data.ts.toDate?.()?.toISOString() || ''
-            : (typeof data.ts === 'string' ? data.ts : '');
-          return { lat: data.lat, lng: data.lng, timestamp, accuracy: data.accuracy, source: data.source };
-        });
+        if (!response.ok) {
+          console.error('Live tracking fetch error:', response.status);
+          setLiveTrackingLoading(false);
+          return;
+        }
 
-        // Filter valid points and transform to expected format
-        const locations = rawLocations
-          .filter(p => typeof p.lat === 'number' && typeof p.lng === 'number' && !!p.timestamp)
-          .map(p => ({
-            latitude: p.lat!,
-            longitude: p.lng!,
-            timestamp: p.timestamp,
-            accuracy: p.accuracy,
-            source: p.source,
-          }));
+        const data = await response.json();
 
-        // Query returns DESC (newest first), reverse for chronological trail (oldest to newest)
-        console.log(`📍 Live tracking: ${locations.length} valid points received`);
-        setLiveTrackingLocations(locations.reverse());
+        if (data.success && data.locations) {
+          // Transform to expected format (backend returns chronological order already)
+          const locations = data.locations
+            .filter((p: { lat?: number; lng?: number; ts?: string }) =>
+              typeof p.lat === 'number' && typeof p.lng === 'number' && !!p.ts
+            )
+            .map((p: { lat: number; lng: number; ts: string; accuracy?: number; source?: string }) => ({
+              latitude: p.lat,
+              longitude: p.lng,
+              timestamp: p.ts,
+              accuracy: p.accuracy,
+              source: p.source,
+            }));
+
+          console.log(`📍 Live tracking: ${locations.length} valid points received`);
+          setLiveTrackingLocations(locations);
+        }
+
         setLiveTrackingLoading(false);
-      },
-      (error) => {
-        clearTimeout(timeoutId);
+      } catch (error) {
         console.error('Live tracking error for session:', liveTrackingSessionId, error);
         setLiveTrackingLoading(false);
       }
-    );
+    };
+
+    // Initial fetch
+    fetchLocations();
+
+    // Poll every 5 seconds for updates
+    const intervalId = setInterval(fetchLocations, 5000);
 
     return () => {
-      clearTimeout(timeoutId);
-      unsubscribe();
+      clearInterval(intervalId);
     };
   }, [liveTrackingSessionId, showLiveTracking]);
 
