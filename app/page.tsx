@@ -105,6 +105,25 @@ interface Review {
   total_count?: number;
 }
 
+// Mini i18n for interaction count display
+const TIMES_TEXT: Record<string, { singular: string; plural: string }> = {
+  en: { singular: 'time', plural: 'times' },
+  es: { singular: 'vez', plural: 'veces' },
+  fr: { singular: 'fois', plural: 'fois' },
+  pt: { singular: 'vez', plural: 'vezes' },
+  it: { singular: 'volta', plural: 'volte' },
+  de: { singular: 'Mal', plural: 'Mal' },
+  ru: { singular: 'раз', plural: 'раз' },
+  zh: { singular: '次', plural: '次' },
+};
+
+const getTimesText = (count: number): string => {
+  // Get browser language
+  const lang = (typeof navigator !== 'undefined' ? navigator.language?.split('-')[0] : 'en') || 'en';
+  const texts = TIMES_TEXT[lang] || TIMES_TEXT['en'];
+  return count === 1 ? texts.singular : texts.plural;
+};
+
 const Home: React.FC = () => {
   const { config } = useSafeMode();
   const [showSearchSection, setShowSearchSection] = useState(config.alertLevel);
@@ -802,9 +821,11 @@ const Home: React.FC = () => {
                             };
 
                             // Get interaction count based on review type (from backend)
-                            const timesCount = review.review_type === 'inperson'
-                              ? (review.inperson_count || 0)
-                              : (review.remote_count || 0);
+                            // Fallback to 1 if no count exists (a review exists = at least 1 interaction)
+                            const timesCountRaw = review.review_type === 'inperson'
+                              ? (review.inperson_count ?? 0)
+                              : (review.remote_count ?? 0);
+                            const timesCount = timesCountRaw > 0 ? timesCountRaw : 1;
 
                             return (
                           <div key={idx} className="bg-gray-50 rounded-xl p-4">
@@ -862,7 +883,7 @@ const Home: React.FC = () => {
                                 <span className={`px-2 py-1 rounded-full ${review.review_type === 'inperson' ? 'bg-green-100 text-green-700' : 'bg-blue-100 text-blue-700'}`}>
                                   {review.review_type === 'inperson' ? 'In-Person' : 'Remote'}
                                   {timesCount > 1 && (
-                                    <span className="ml-1 text-green-600 font-medium">({timesCount} times)</span>
+                                    <span className="ml-1 text-green-600 font-medium">({timesCount} {getTimesText(timesCount)})</span>
                                   )}
                                 </span>
                               )}
