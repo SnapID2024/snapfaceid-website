@@ -305,6 +305,10 @@ export default function AdminDashboard() {
   const panicSoundTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const [isPanicSoundPlaying, setIsPanicSoundPlaying] = useState(false);
 
+  // AudioContext global que se pre-calienta con cualquier interacción del usuario
+  const globalAudioContextRef = useRef<AudioContext | null>(null);
+  const audioUnlockedRef = useRef(false);
+
   // Lista de países con banderas y códigos
   const countryCodes = [
     { code: '+1', flag: '🇺🇸', name: 'USA' },
@@ -464,26 +468,69 @@ export default function AdminDashboard() {
     };
   }, [router, fetchAlerts, alerts.length, hasOfflineDevices]);
 
+  // === PRE-CALENTAR AUDIO CON CUALQUIER INTERACCIÓN ===
+  // Esto desbloquea el AudioContext para que las alarmas automáticas funcionen
+  useEffect(() => {
+    const unlockAudio = async () => {
+      if (audioUnlockedRef.current) return; // Ya desbloqueado
+
+      try {
+        const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+        if (!globalAudioContextRef.current) {
+          globalAudioContextRef.current = new AudioContextClass();
+        }
+
+        if (globalAudioContextRef.current.state === 'suspended') {
+          await globalAudioContextRef.current.resume();
+        }
+
+        if (globalAudioContextRef.current.state === 'running') {
+          audioUnlockedRef.current = true;
+          console.log('🔓 Audio desbloqueado por interacción del usuario');
+        }
+      } catch (e) {
+        console.warn('⚠️ Error pre-calentando audio:', e);
+      }
+    };
+
+    // Escuchar cualquier click, touch o keydown en la página
+    const events = ['click', 'touchstart', 'keydown'];
+    events.forEach(event => {
+      document.addEventListener(event, unlockAudio, { once: false, passive: true });
+    });
+
+    return () => {
+      events.forEach(event => {
+        document.removeEventListener(event, unlockAudio);
+      });
+    };
+  }, []);
+
   // === PANIC ALERT SOUND - Función para reproducir alarma ===
   // Ref para controlar si debemos seguir reproduciendo (evita stale closure)
   const shouldPlayAlarmRef = useRef(false);
 
   const playAlarmSound = useCallback(async () => {
     console.log('🔊 Intentando reproducir alarma...');
+    console.log('🔊 Audio pre-desbloqueado:', audioUnlockedRef.current);
     shouldPlayAlarmRef.current = true;
 
     try {
-      // Usar Web Audio API
+      // Usar el AudioContext global pre-calentado si está disponible
       const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
-      const audioContext = new AudioContextClass();
+      let audioContext: AudioContext;
 
-      console.log('🔊 AudioContext state:', audioContext.state);
-
-      // CRÍTICO: Resumir el AudioContext si está suspendido
-      if (audioContext.state === 'suspended') {
-        console.log('🔊 Resumiendo AudioContext...');
-        await audioContext.resume();
-        console.log('🔊 AudioContext resumed, state:', audioContext.state);
+      if (globalAudioContextRef.current && globalAudioContextRef.current.state === 'running') {
+        // Usar el contexto global ya desbloqueado
+        audioContext = globalAudioContextRef.current;
+        console.log('🔊 Usando AudioContext global pre-calentado');
+      } else {
+        // Crear nuevo contexto e intentar resumir
+        audioContext = new AudioContextClass();
+        if (audioContext.state === 'suspended') {
+          await audioContext.resume();
+        }
+        console.log('🔊 Nuevo AudioContext, state:', audioContext.state);
       }
 
       // Función para crear y reproducir un beep
@@ -501,7 +548,6 @@ export default function AdminDashboard() {
 
           oscillator.start();
           oscillator.stop(audioContext.currentTime + duration);
-          console.log('🔊 Beep!', frequency, 'Hz');
         } catch (e) {
           console.error('❌ Error en beep:', e);
         }
@@ -509,21 +555,23 @@ export default function AdminDashboard() {
 
       // Reproducir primer beep inmediatamente
       playBeep(880, 0.4);
+      console.log('🔊 Primer beep reproducido');
 
       // Secuencia de beeps para simular alarma (tipo sirena)
-      let beepCount = 1; // Ya hicimos el primer beep
-      const maxBeeps = 60; // 30 segundos de alarma (beep cada 0.5s)
+      let beepCount = 1;
+      const maxBeeps = 60; // 30 segundos de alarma
 
       const beepInterval = setInterval(() => {
-        // Usar ref para evitar stale closure
         if (beepCount >= maxBeeps || !shouldPlayAlarmRef.current) {
           console.log('🔇 Deteniendo intervalo de beeps');
           clearInterval(beepInterval);
-          try { audioContext.close(); } catch (e) {}
+          // No cerrar el contexto global
+          if (audioContext !== globalAudioContextRef.current) {
+            try { audioContext.close(); } catch (e) {}
+          }
           return;
         }
 
-        // Alternar entre frecuencias para efecto sirena
         const freq = beepCount % 2 === 0 ? 880 : 1320;
         playBeep(freq, 0.4);
         beepCount++;
@@ -536,7 +584,9 @@ export default function AdminDashboard() {
       panicSoundTimeoutRef.current = setTimeout(() => {
         shouldPlayAlarmRef.current = false;
         clearInterval(beepInterval);
-        try { audioContext.close(); } catch (e) {}
+        if (audioContext !== globalAudioContextRef.current) {
+          try { audioContext.close(); } catch (e) {}
+        }
         setIsPanicSoundPlaying(false);
         panicAudioRef.current = null;
         console.log('🔇 Alarma detenida automáticamente después de 30s');
@@ -594,7 +644,10 @@ export default function AdminDashboard() {
       try {
         const audioState = panicAudioRef.current as any;
         if (audioState.beepInterval) clearInterval(audioState.beepInterval);
-        if (audioState.audioContext) audioState.audioContext.close();
+        // No cerrar el contexto global, solo contextos creados ad-hoc
+        if (audioState.audioContext && audioState.audioContext !== globalAudioContextRef.current) {
+          audioState.audioContext.close();
+        }
         panicAudioRef.current = null;
       } catch (e) {
         console.error('Error deteniendo audio:', e);
@@ -1298,20 +1351,6 @@ Please respond immediately.`;
         </button>
       )}
 
-      {/* TEST SOUND BUTTON - Para pruebas de humo */}
-      {!isPanicSoundPlaying && (
-        <button
-          onClick={() => {
-            console.log('🧪 TEST: Usuario clickeó botón de prueba');
-            setIsPanicSoundPlaying(true);
-            playAlarmSound();
-          }}
-          className="fixed bottom-4 right-4 z-[9999] flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-3 rounded-xl shadow-lg transition-all"
-          title="Test panic alarm sound"
-        >
-          <span className="font-bold">🔊 Test Sound</span>
-        </button>
-      )}
 
       {/* Header */}
       <header className="bg-[#3D1A54] text-white shadow-lg">
