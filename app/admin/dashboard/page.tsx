@@ -884,10 +884,10 @@ export default function AdminDashboard() {
     }
 
     // Subscribe to the locations subcollection
-    // Backend stores: lat, lng, ts (not latitude, longitude, timestamp)
+    // Backend stores: lat, lng, ts, ts_unix (use ts_unix for stable ordering)
     console.log('🔍 Subscribing to live tracking for session:', liveTrackingSessionId);
     const locationsRef = collection(db, 'GuardianSessions', liveTrackingSessionId, 'locations');
-    const locationsQuery = query(locationsRef, orderBy('ts', 'desc'), limit(200));
+    const locationsQuery = query(locationsRef, orderBy('ts_unix', 'desc'), limit(200));
 
     // Timeout fallback: stop loading after 5s even if no data arrives
     // This prevents infinite spinner if there's a permission error or no docs

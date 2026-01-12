@@ -5,8 +5,7 @@ const TWILIO_AUTH_TOKEN = process.env.TWILIO_AUTH_TOKEN;
 const TWILIO_PHONE_NUMBER = process.env.TWILIO_PHONE_NUMBER;
 const BACKEND_API_URL = process.env.BACKEND_API_URL || 'https://api.snapfaceid.com';
 
-// Fallback phone number (will be overridden by Firebase)
-const DEFAULT_TRUSTED_PHONE = '+17864490937';
+// Note: Trusted phone is fetched from backend config, no hardcoded fallback
 
 // In-memory store for verification codes (with expiration)
 // In production, this should be in Redis or similar
@@ -16,9 +15,9 @@ function generateCode(): string {
   return Math.floor(100000 + Math.random() * 900000).toString();
 }
 
-async function getTrustedPhone(): Promise<string> {
+async function getTrustedPhone(): Promise<string | null> {
   try {
-    // Try to get from backend/Firebase
+    // Get trusted phone from backend/Firebase config
     const response = await fetch(`${BACKEND_API_URL}/api/security-config`, {
       method: 'GET',
       headers: { 'Content-Type': 'application/json' },
@@ -35,7 +34,7 @@ async function getTrustedPhone(): Promise<string> {
     console.error('Error fetching trusted phone:', error);
   }
 
-  return DEFAULT_TRUSTED_PHONE;
+  return null;
 }
 
 async function sendSMS(to: string, body: string): Promise<boolean> {
@@ -96,8 +95,15 @@ export async function POST(request: NextRequest) {
         }
       }
 
-      // Get trusted phone number
+      // Get trusted phone number from config
       const trustedPhone = await getTrustedPhone();
+
+      if (!trustedPhone) {
+        return NextResponse.json({
+          success: false,
+          error: 'Trusted phone not configured'
+        }, { status: 500 });
+      }
 
       // Send SMS
       const sent = await sendSMS(
