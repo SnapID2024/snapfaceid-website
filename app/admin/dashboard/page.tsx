@@ -889,9 +889,17 @@ export default function AdminDashboard() {
     const locationsRef = collection(db, 'GuardianSessions', liveTrackingSessionId, 'locations');
     const locationsQuery = query(locationsRef, orderBy('ts', 'desc'), limit(200));
 
+    // Timeout fallback: stop loading after 5s even if no data arrives
+    // This prevents infinite spinner if there's a permission error or no docs
+    const timeoutId = setTimeout(() => {
+      console.log('⏱️ Live tracking timeout - stopping loader');
+      setLiveTrackingLoading(false);
+    }, 5000);
+
     const unsubscribe = onSnapshot(
       locationsQuery,
       (snapshot) => {
+        clearTimeout(timeoutId);
         const rawLocations = snapshot.docs.map(doc => {
           const data = doc.data() as { lat?: number; lng?: number; ts?: { toDate?: () => Date } | string; accuracy?: number; source?: string };
           const timestamp = data.ts && typeof data.ts === 'object' && 'toDate' in data.ts
@@ -917,12 +925,14 @@ export default function AdminDashboard() {
         setLiveTrackingLoading(false);
       },
       (error) => {
+        clearTimeout(timeoutId);
         console.error('Live tracking error for session:', liveTrackingSessionId, error);
         setLiveTrackingLoading(false);
       }
     );
 
     return () => {
+      clearTimeout(timeoutId);
       unsubscribe();
     };
   }, [liveTrackingSessionId, showLiveTracking]);
