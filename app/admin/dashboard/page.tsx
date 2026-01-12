@@ -482,46 +482,71 @@ export default function AdminDashboard() {
 
       // Crear y reproducir audio
       if (!panicAudioRef.current) {
-        // Usar Web Audio API para generar un tono agudo de alarma
-        const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
-        const oscillator = audioContext.createOscillator();
-        const gainNode = audioContext.createGain();
+        const startAlarmSound = async () => {
+          try {
+            // Usar Web Audio API para generar un tono agudo de alarma
+            const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
 
-        oscillator.connect(gainNode);
-        gainNode.connect(audioContext.destination);
+            // IMPORTANTE: Resumir el AudioContext si está suspendido (bloqueo del navegador)
+            if (audioContext.state === 'suspended') {
+              console.log('🔊 AudioContext suspendido, intentando resumir...');
+              await audioContext.resume();
+              console.log('🔊 AudioContext resumido:', audioContext.state);
+            }
 
-        // Tono agudo alternante (tipo sirena)
-        oscillator.type = 'square';
-        oscillator.frequency.setValueAtTime(880, audioContext.currentTime); // A5
+            const oscillator = audioContext.createOscillator();
+            const gainNode = audioContext.createGain();
 
-        // Modular la frecuencia para efecto de sirena
-        const modulateFrequency = () => {
-          if (!isPanicSoundPlaying) return;
-          oscillator.frequency.setValueAtTime(880, audioContext.currentTime);
-          oscillator.frequency.linearRampToValueAtTime(1320, audioContext.currentTime + 0.5);
-          oscillator.frequency.linearRampToValueAtTime(880, audioContext.currentTime + 1);
+            oscillator.connect(gainNode);
+            gainNode.connect(audioContext.destination);
+
+            // Tono agudo alternante (tipo sirena)
+            oscillator.type = 'square';
+            oscillator.frequency.setValueAtTime(880, audioContext.currentTime); // A5
+
+            // Modular la frecuencia para efecto de sirena
+            const modulateFrequency = () => {
+              try {
+                oscillator.frequency.setValueAtTime(880, audioContext.currentTime);
+                oscillator.frequency.linearRampToValueAtTime(1320, audioContext.currentTime + 0.5);
+                oscillator.frequency.linearRampToValueAtTime(880, audioContext.currentTime + 1);
+              } catch (e) {
+                // Ignorar errores de modulación
+              }
+            };
+
+            // Volumen más alto para alarma
+            gainNode.gain.setValueAtTime(0.5, audioContext.currentTime);
+
+            oscillator.start();
+            setIsPanicSoundPlaying(true);
+            console.log('🔊 Alarma de pánico INICIADA');
+
+            // Modular frecuencia cada segundo
+            const modulationInterval = setInterval(modulateFrequency, 1000);
+
+            // Detener después de 30 segundos
+            panicSoundTimeoutRef.current = setTimeout(() => {
+              try {
+                oscillator.stop();
+                audioContext.close();
+                clearInterval(modulationInterval);
+              } catch (e) {}
+              setIsPanicSoundPlaying(false);
+              panicAudioRef.current = null;
+              console.log('🔇 Sonido de pánico detenido después de 30 segundos');
+            }, 30000);
+
+            // Guardar referencia para limpieza
+            (panicAudioRef.current as any) = { oscillator, audioContext, modulationInterval };
+          } catch (error) {
+            console.error('❌ Error iniciando alarma de pánico:', error);
+            // Aún así mostrar el botón mute como indicador visual
+            setIsPanicSoundPlaying(true);
+          }
         };
 
-        // Volumen
-        gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
-
-        oscillator.start();
-        setIsPanicSoundPlaying(true);
-
-        // Modular frecuencia cada segundo
-        const modulationInterval = setInterval(modulateFrequency, 1000);
-
-        // Detener después de 30 segundos
-        panicSoundTimeoutRef.current = setTimeout(() => {
-          oscillator.stop();
-          audioContext.close();
-          clearInterval(modulationInterval);
-          setIsPanicSoundPlaying(false);
-          console.log('🔇 Sonido de pánico detenido después de 30 segundos');
-        }, 30000);
-
-        // Guardar referencia para limpieza
-        (panicAudioRef.current as any) = { oscillator, audioContext, modulationInterval };
+        startAlarmSound();
       }
     }
 
