@@ -882,9 +882,7 @@ const Home: React.FC = () => {
                               {review.review_type && (
                                 <span className={`px-2 py-1 rounded-full ${review.review_type === 'inperson' ? 'bg-green-100 text-green-700' : 'bg-blue-100 text-blue-700'}`}>
                                   {review.review_type === 'inperson' ? 'In-Person' : 'Remote'}
-                                  {timesCount > 1 && (
-                                    <span className="ml-1 text-green-600 font-medium">({timesCount} {getTimesText(timesCount)})</span>
-                                  )}
+                                  <span className="ml-1 font-medium">({timesCount} {getTimesText(timesCount)})</span>
                                 </span>
                               )}
                             </div>
