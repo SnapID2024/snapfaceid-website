@@ -537,6 +537,27 @@ export default function AdminDashboard() {
     };
   }, [alerts, isPanicSoundPlaying]);
 
+  // Función para detener manualmente el sonido de pánico
+  const stopPanicSound = useCallback(() => {
+    if (panicSoundTimeoutRef.current) {
+      clearTimeout(panicSoundTimeoutRef.current);
+      panicSoundTimeoutRef.current = null;
+    }
+    if (panicAudioRef.current) {
+      try {
+        const audioState = panicAudioRef.current as any;
+        if (audioState.oscillator) audioState.oscillator.stop();
+        if (audioState.audioContext) audioState.audioContext.close();
+        if (audioState.modulationInterval) clearInterval(audioState.modulationInterval);
+        panicAudioRef.current = null;
+      } catch (e) {
+        // Ignorar errores
+      }
+    }
+    setIsPanicSoundPlaying(false);
+    console.log('🔇 Sonido de pánico detenido manualmente');
+  }, []);
+
   // Fetch pending complaints count
   useEffect(() => {
     const fetchComplaintsCount = async () => {
@@ -1214,6 +1235,23 @@ Please respond immediately.`;
 
   return (
     <div className="min-h-screen bg-gray-100">
+      {/* Floating Mute Button for Panic Alert Sound */}
+      {isPanicSoundPlaying && (
+        <button
+          onClick={stopPanicSound}
+          className="fixed top-20 right-4 z-[9999] flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white px-4 py-3 rounded-xl shadow-2xl animate-pulse transition-all"
+          title="Click to mute panic alert"
+        >
+          <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
+          </svg>
+          <span className="font-bold">🔊 MUTE ALERT</span>
+          <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+      )}
+
       {/* Header */}
       <header className="bg-[#3D1A54] text-white shadow-lg">
         <div className="max-w-full mx-auto px-4 sm:px-6 lg:px-8">
