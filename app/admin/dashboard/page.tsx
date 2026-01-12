@@ -43,6 +43,15 @@ interface Alert {
     longitude: number;
     timestamp: string;
   };
+  // === TIMELINE COMPLETA ===
+  intervalMinutes?: number;       // Intervalo configurado (15, 30, 60, 120 min)
+  timerExpiresAt?: string;        // Cuando expira/expiró el countdown
+  verificationStartedAt?: string; // Cuando empezó verificación (5 min)
+  finalWarningAt?: string;        // Cuando empezó aviso final (60s)
+  verifiedAt?: string;            // Cuando ingresó palabra secreta correcta
+  emergencyAt?: string;           // Cuando se activó emergencia
+  panicAt?: string;               // Cuando presionó botón de pánico
+  safeAt?: string;                // Cuando se marcó como safe
   // === CAMPOS PARA DETECCIÓN DE DISPOSITIVO OFFLINE ===
   deviceOffline?: boolean;  // Si el dispositivo perdió conexión (sin heartbeat)
   deviceSleeping?: boolean; // Si el dispositivo está probablemente bloqueado (no es emergencia)
@@ -2383,35 +2392,93 @@ Please respond immediately.`;
                   );
                 })()}
 
-                {/* Timeline - Compact horizontal */}
+                {/* Timeline - Complete Session History */}
                 <div className="border-t pt-3 mt-3">
-                  <div className="flex flex-wrap items-center gap-4 text-sm mb-3">
-                    <div className="flex items-center gap-2 bg-gray-100 px-3 py-1.5 rounded-full">
-                      <div className="w-2 h-2 rounded-full bg-green-500" />
-                      <span className="text-gray-600">Started: {formatTime(selectedAlert.activatedAt)}</span>
+                  <div className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Session Timeline</div>
+                  <div className="bg-gray-50 rounded-lg p-3 space-y-2 text-sm">
+                    {/* Started */}
+                    <div className="flex items-center gap-2">
+                      <div className="w-2 h-2 rounded-full bg-green-500 flex-shrink-0" />
+                      <span className="text-gray-600">Guardian Started:</span>
+                      <span className="font-medium text-gray-900">{formatTime(selectedAlert.activatedAt)}</span>
+                      {selectedAlert.intervalMinutes && (
+                        <span className="text-gray-400 text-xs">({selectedAlert.intervalMinutes} min interval)</span>
+                      )}
                     </div>
-                    {selectedAlert.status === 'active' && (
-                      <div className="flex items-center gap-2 bg-green-100 px-3 py-1.5 rounded-full">
-                        <div className="w-2 h-2 rounded-full bg-green-500" />
-                        <span className="text-green-700 font-medium">Safe at {formatTime(selectedAlert.lastCheckIn)}</span>
+
+                    {/* Timer Expired / Verification Started */}
+                    {selectedAlert.timerExpiresAt && (
+                      <div className="flex items-center gap-2">
+                        <div className="w-2 h-2 rounded-full bg-yellow-500 flex-shrink-0" />
+                        <span className="text-gray-600">Timer Expired:</span>
+                        <span className="font-medium text-yellow-700">{formatTime(selectedAlert.timerExpiresAt)}</span>
+                      </div>
+                    )}
+
+                    {selectedAlert.verificationStartedAt && (
+                      <div className="flex items-center gap-2">
+                        <div className="w-2 h-2 rounded-full bg-orange-400 flex-shrink-0" />
+                        <span className="text-gray-600">Verification Started (5 min):</span>
+                        <span className="font-medium text-orange-600">{formatTime(selectedAlert.verificationStartedAt)}</span>
+                      </div>
+                    )}
+
+                    {/* Final Warning */}
+                    {selectedAlert.finalWarningAt && (
+                      <div className="flex items-center gap-2">
+                        <div className="w-2 h-2 rounded-full bg-orange-600 flex-shrink-0 animate-pulse" />
+                        <span className="text-gray-600">Final Warning (60s):</span>
+                        <span className="font-medium text-orange-700">{formatTime(selectedAlert.finalWarningAt)}</span>
+                      </div>
+                    )}
+
+                    {/* Verified (entered secret word) */}
+                    {selectedAlert.verifiedAt && (
+                      <div className="flex items-center gap-2">
+                        <div className="w-2 h-2 rounded-full bg-green-600 flex-shrink-0" />
+                        <span className="text-gray-600">Secret Word Entered:</span>
+                        <span className="font-medium text-green-700">{formatTime(selectedAlert.verifiedAt)}</span>
+                      </div>
+                    )}
+
+                    {/* Emergency */}
+                    {selectedAlert.emergencyAt && (
+                      <div className="flex items-center gap-2">
+                        <div className="w-2 h-2 rounded-full bg-red-600 flex-shrink-0 animate-pulse" />
+                        <span className="text-gray-600">🚨 Emergency Triggered:</span>
+                        <span className="font-bold text-red-700">{formatTime(selectedAlert.emergencyAt)}</span>
+                      </div>
+                    )}
+
+                    {/* Panic */}
+                    {selectedAlert.panicAt && (
+                      <div className="flex items-center gap-2">
+                        <div className="w-2 h-2 rounded-full bg-yellow-500 flex-shrink-0 animate-pulse" />
+                        <span className="text-gray-600">🆘 Panic Button Pressed:</span>
+                        <span className="font-bold text-yellow-700">{formatTime(selectedAlert.panicAt)}</span>
+                      </div>
+                    )}
+
+                    {/* Safe / Ended */}
+                    {selectedAlert.safeAt && (
+                      <div className="flex items-center gap-2">
+                        <div className="w-2 h-2 rounded-full bg-blue-500 flex-shrink-0" />
+                        <span className="text-gray-600">Marked Safe:</span>
+                        <span className="font-medium text-blue-700">{formatTime(selectedAlert.safeAt)}</span>
+                      </div>
+                    )}
+
+                    {/* Current Status Indicator */}
+                    {selectedAlert.status === 'active' && !selectedAlert.verificationStartedAt && (
+                      <div className="flex items-center gap-2 pt-1 border-t border-gray-200">
+                        <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse flex-shrink-0" />
+                        <span className="text-green-700 font-medium">Currently monitoring...</span>
                       </div>
                     )}
                     {selectedAlert.status === 'no_response' && (
-                      <div className="flex items-center gap-2 bg-orange-100 px-3 py-1.5 rounded-full animate-pulse">
-                        <div className="w-2 h-2 rounded-full bg-orange-500" />
-                        <span className="text-orange-700 font-medium">Waiting since {formatTime(selectedAlert.lastCheckIn)}</span>
-                      </div>
-                    )}
-                    {selectedAlert.status === 'emergency' && (
-                      <div className="flex items-center gap-2 bg-red-100 px-3 py-1.5 rounded-full animate-pulse">
-                        <div className="w-2 h-2 rounded-full bg-red-600" />
-                        <span className="text-red-700 font-bold">EMERGENCY at {formatTime(selectedAlert.lastCheckIn)}</span>
-                      </div>
-                    )}
-                    {selectedAlert.status === 'safe' && (
-                      <div className="flex items-center gap-2 bg-blue-100 px-3 py-1.5 rounded-full">
-                        <div className="w-2 h-2 rounded-full bg-blue-500" />
-                        <span className="text-blue-700 font-medium">Ended at {formatTime(selectedAlert.lastCheckIn)}</span>
+                      <div className="flex items-center gap-2 pt-1 border-t border-gray-200">
+                        <div className="w-2 h-2 rounded-full bg-orange-500 animate-pulse flex-shrink-0" />
+                        <span className="text-orange-700 font-medium">⏳ Waiting for response...</span>
                       </div>
                     )}
                   </div>
