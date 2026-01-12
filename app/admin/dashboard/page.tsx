@@ -464,115 +464,128 @@ export default function AdminDashboard() {
     };
   }, [router, fetchAlerts, alerts.length, hasOfflineDevices]);
 
+  // === PANIC ALERT SOUND - Función para reproducir alarma ===
+  // Ref para controlar si debemos seguir reproduciendo (evita stale closure)
+  const shouldPlayAlarmRef = useRef(false);
+
+  const playAlarmSound = useCallback(async () => {
+    console.log('🔊 Intentando reproducir alarma...');
+    shouldPlayAlarmRef.current = true;
+
+    try {
+      // Usar Web Audio API
+      const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+      const audioContext = new AudioContextClass();
+
+      console.log('🔊 AudioContext state:', audioContext.state);
+
+      // CRÍTICO: Resumir el AudioContext si está suspendido
+      if (audioContext.state === 'suspended') {
+        console.log('🔊 Resumiendo AudioContext...');
+        await audioContext.resume();
+        console.log('🔊 AudioContext resumed, state:', audioContext.state);
+      }
+
+      // Función para crear y reproducir un beep
+      const playBeep = (frequency: number, duration: number) => {
+        try {
+          const oscillator = audioContext.createOscillator();
+          const gainNode = audioContext.createGain();
+
+          oscillator.connect(gainNode);
+          gainNode.connect(audioContext.destination);
+
+          oscillator.type = 'square';
+          oscillator.frequency.value = frequency;
+          gainNode.gain.value = 0.5;
+
+          oscillator.start();
+          oscillator.stop(audioContext.currentTime + duration);
+          console.log('🔊 Beep!', frequency, 'Hz');
+        } catch (e) {
+          console.error('❌ Error en beep:', e);
+        }
+      };
+
+      // Reproducir primer beep inmediatamente
+      playBeep(880, 0.4);
+
+      // Secuencia de beeps para simular alarma (tipo sirena)
+      let beepCount = 1; // Ya hicimos el primer beep
+      const maxBeeps = 60; // 30 segundos de alarma (beep cada 0.5s)
+
+      const beepInterval = setInterval(() => {
+        // Usar ref para evitar stale closure
+        if (beepCount >= maxBeeps || !shouldPlayAlarmRef.current) {
+          console.log('🔇 Deteniendo intervalo de beeps');
+          clearInterval(beepInterval);
+          try { audioContext.close(); } catch (e) {}
+          return;
+        }
+
+        // Alternar entre frecuencias para efecto sirena
+        const freq = beepCount % 2 === 0 ? 880 : 1320;
+        playBeep(freq, 0.4);
+        beepCount++;
+      }, 500);
+
+      // Guardar referencia para poder detener
+      (panicAudioRef.current as any) = { audioContext, beepInterval };
+
+      // Auto-detener después de 30 segundos
+      panicSoundTimeoutRef.current = setTimeout(() => {
+        shouldPlayAlarmRef.current = false;
+        clearInterval(beepInterval);
+        try { audioContext.close(); } catch (e) {}
+        setIsPanicSoundPlaying(false);
+        panicAudioRef.current = null;
+        console.log('🔇 Alarma detenida automáticamente después de 30s');
+      }, 30000);
+
+      console.log('🔊 ¡ALARMA INICIADA EXITOSAMENTE!');
+      return true;
+    } catch (error) {
+      console.error('❌ Error reproduciendo alarma:', error);
+      return false;
+    }
+  }, []);
+
   // === PANIC ALERT SOUND EFFECT ===
-  // Detectar nuevas alertas de pánico y reproducir sonido agudo por 30 segundos
+  // Detectar alertas de pánico y reproducir sonido
   useEffect(() => {
-    // Obtener todas las alertas de pánico actuales
     const currentPanicAlerts = alerts.filter(a => a.status === 'panic');
     const currentPanicIds = new Set(currentPanicAlerts.map(a => a.id));
 
-    // Buscar alertas de pánico NUEVAS (no vistas antes)
+    // Buscar alertas de pánico NUEVAS
     const newPanicAlerts = currentPanicAlerts.filter(
       a => !previousPanicAlertIdsRef.current.has(a.id)
     );
 
-    // Si hay nuevas alertas de pánico, reproducir sonido
-    if (newPanicAlerts.length > 0 && !isPanicSoundPlaying) {
-      console.log('🆘 NUEVA ALERTA DE PÁNICO DETECTADA:', newPanicAlerts.map(a => a.userName));
-
-      // Crear y reproducir audio
-      if (!panicAudioRef.current) {
-        const startAlarmSound = async () => {
-          try {
-            // Usar Web Audio API para generar un tono agudo de alarma
-            const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
-
-            // IMPORTANTE: Resumir el AudioContext si está suspendido (bloqueo del navegador)
-            if (audioContext.state === 'suspended') {
-              console.log('🔊 AudioContext suspendido, intentando resumir...');
-              await audioContext.resume();
-              console.log('🔊 AudioContext resumido:', audioContext.state);
-            }
-
-            const oscillator = audioContext.createOscillator();
-            const gainNode = audioContext.createGain();
-
-            oscillator.connect(gainNode);
-            gainNode.connect(audioContext.destination);
-
-            // Tono agudo alternante (tipo sirena)
-            oscillator.type = 'square';
-            oscillator.frequency.setValueAtTime(880, audioContext.currentTime); // A5
-
-            // Modular la frecuencia para efecto de sirena
-            const modulateFrequency = () => {
-              try {
-                oscillator.frequency.setValueAtTime(880, audioContext.currentTime);
-                oscillator.frequency.linearRampToValueAtTime(1320, audioContext.currentTime + 0.5);
-                oscillator.frequency.linearRampToValueAtTime(880, audioContext.currentTime + 1);
-              } catch (e) {
-                // Ignorar errores de modulación
-              }
-            };
-
-            // Volumen más alto para alarma
-            gainNode.gain.setValueAtTime(0.5, audioContext.currentTime);
-
-            oscillator.start();
-            setIsPanicSoundPlaying(true);
-            console.log('🔊 Alarma de pánico INICIADA');
-
-            // Modular frecuencia cada segundo
-            const modulationInterval = setInterval(modulateFrequency, 1000);
-
-            // Detener después de 30 segundos
-            panicSoundTimeoutRef.current = setTimeout(() => {
-              try {
-                oscillator.stop();
-                audioContext.close();
-                clearInterval(modulationInterval);
-              } catch (e) {}
-              setIsPanicSoundPlaying(false);
-              panicAudioRef.current = null;
-              console.log('🔇 Sonido de pánico detenido después de 30 segundos');
-            }, 30000);
-
-            // Guardar referencia para limpieza
-            (panicAudioRef.current as any) = { oscillator, audioContext, modulationInterval };
-          } catch (error) {
-            console.error('❌ Error iniciando alarma de pánico:', error);
-            // Aún así mostrar el botón mute como indicador visual
-            setIsPanicSoundPlaying(true);
-          }
-        };
-
-        startAlarmSound();
-      }
+    // Si hay alertas de pánico (nuevas o existentes) y no está sonando
+    if (currentPanicAlerts.length > 0 && !isPanicSoundPlaying) {
+      console.log('🆘 PÁNICO DETECTADO - Alertas:', currentPanicAlerts.length, 'Nuevas:', newPanicAlerts.length);
+      setIsPanicSoundPlaying(true);
+      playAlarmSound();
     }
 
-    // Actualizar los IDs de pánico conocidos
+    // Si ya no hay alertas de pánico, detener el sonido
+    if (currentPanicAlerts.length === 0 && isPanicSoundPlaying) {
+      stopPanicSound();
+    }
+
     previousPanicAlertIdsRef.current = currentPanicIds;
 
-    // Cleanup cuando el componente se desmonte
     return () => {
       if (panicSoundTimeoutRef.current) {
         clearTimeout(panicSoundTimeoutRef.current);
       }
-      if (panicAudioRef.current) {
-        try {
-          const audioState = panicAudioRef.current as any;
-          if (audioState.oscillator) audioState.oscillator.stop();
-          if (audioState.audioContext) audioState.audioContext.close();
-          if (audioState.modulationInterval) clearInterval(audioState.modulationInterval);
-        } catch (e) {
-          // Ignorar errores de limpieza
-        }
-      }
     };
-  }, [alerts, isPanicSoundPlaying]);
+  }, [alerts, isPanicSoundPlaying, playAlarmSound]);
 
   // Función para detener manualmente el sonido de pánico
   const stopPanicSound = useCallback(() => {
+    console.log('🔇 Deteniendo alarma manualmente...');
+    shouldPlayAlarmRef.current = false; // Detener el loop de beeps
     if (panicSoundTimeoutRef.current) {
       clearTimeout(panicSoundTimeoutRef.current);
       panicSoundTimeoutRef.current = null;
@@ -580,12 +593,11 @@ export default function AdminDashboard() {
     if (panicAudioRef.current) {
       try {
         const audioState = panicAudioRef.current as any;
-        if (audioState.oscillator) audioState.oscillator.stop();
+        if (audioState.beepInterval) clearInterval(audioState.beepInterval);
         if (audioState.audioContext) audioState.audioContext.close();
-        if (audioState.modulationInterval) clearInterval(audioState.modulationInterval);
         panicAudioRef.current = null;
       } catch (e) {
-        // Ignorar errores
+        console.error('Error deteniendo audio:', e);
       }
     }
     setIsPanicSoundPlaying(false);
@@ -1283,6 +1295,21 @@ Please respond immediately.`;
           <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
           </svg>
+        </button>
+      )}
+
+      {/* TEST SOUND BUTTON - Para pruebas de humo */}
+      {!isPanicSoundPlaying && (
+        <button
+          onClick={() => {
+            console.log('🧪 TEST: Usuario clickeó botón de prueba');
+            setIsPanicSoundPlaying(true);
+            playAlarmSound();
+          }}
+          className="fixed bottom-4 right-4 z-[9999] flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-3 rounded-xl shadow-lg transition-all"
+          title="Test panic alarm sound"
+        >
+          <span className="font-bold">🔊 Test Sound</span>
         </button>
       )}
 
