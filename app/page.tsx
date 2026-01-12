@@ -98,6 +98,11 @@ interface Review {
   author_username: string;
   author_avatar_url?: string;
   author_preset_avatar_id?: number;
+  author_uid?: string;
+  // Interaction counts from backend (new subcollection structure)
+  inperson_count?: number;
+  remote_count?: number;
+  total_count?: number;
 }
 
 const Home: React.FC = () => {
@@ -796,6 +801,11 @@ const Home: React.FC = () => {
                               return `https://ui-avatars.com/api/?name=${encodeURIComponent(review.author_username || 'A')}&background=6A1B9A&color=fff&size=80`;
                             };
 
+                            // Get interaction count based on review type (from backend)
+                            const timesCount = review.review_type === 'inperson'
+                              ? (review.inperson_count || 0)
+                              : (review.remote_count || 0);
+
                             return (
                           <div key={idx} className="bg-gray-50 rounded-xl p-4">
                             {/* Author Info with Avatar */}
@@ -851,6 +861,9 @@ const Home: React.FC = () => {
                               {review.review_type && (
                                 <span className={`px-2 py-1 rounded-full ${review.review_type === 'inperson' ? 'bg-green-100 text-green-700' : 'bg-blue-100 text-blue-700'}`}>
                                   {review.review_type === 'inperson' ? 'In-Person' : 'Remote'}
+                                  {timesCount > 1 && (
+                                    <span className="ml-1 text-green-600 font-medium">({timesCount} times)</span>
+                                  )}
                                 </span>
                               )}
                             </div>
