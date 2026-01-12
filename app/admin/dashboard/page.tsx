@@ -3,6 +3,8 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import dynamic from 'next/dynamic';
+import { db } from '@/lib/firebase';
+import { collection, query, orderBy, limit, onSnapshot } from 'firebase/firestore';
 
 // Dynamic import for Leaflet map (client-side only)
 const GuardianMap = dynamic(() => import('@/app/components/GuardianMap'), {
@@ -17,10 +19,24 @@ const GuardianMap = dynamic(() => import('@/app/components/GuardianMap'), {
   ),
 });
 
+// Dynamic import for Live Tracking map
+const LiveTrackingMap = dynamic(() => import('@/app/components/LiveTrackingMap'), {
+  ssr: false,
+  loading: () => (
+    <div className="w-full h-[500px] bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center rounded-xl">
+      <div className="text-center">
+        <div className="w-8 h-8 border-4 border-purple-600 border-t-transparent rounded-full animate-spin mx-auto mb-3" />
+        <span className="text-gray-500 text-sm">Loading live tracking...</span>
+      </div>
+    </div>
+  ),
+});
+
 const LOGO_URL = 'https://d64gsuwffb70l.cloudfront.net/6834a8f25630f332851529fb_1765418801539_cd77434c.png';
 
 interface Alert {
   id: string;
+  sessionId?: string;  // session_id from GuardianSessions collection
   userId: string;
   userName: string;
   userNickname?: string;  // Apodo como lo conoce el contacto de emergencia
@@ -61,6 +77,10 @@ interface Alert {
   batteryState?: 'charging' | 'unplugged' | 'full' | 'unknown';  // Estado de carga
   batteryWarning?: boolean; // Si la batería está baja
   networkType?: 'wifi' | 'cellular' | 'none' | 'unknown';  // Tipo de conexión
+  // === TRACKING EN BACKGROUND ===
+  locationUpdatedAt?: string;   // Última actualización de ubicación desde background task
+  locationSource?: 'background_task' | 'foreground' | 'unknown';  // Fuente del último update
+  trackingError?: string;       // Error si el tracking no pudo iniciarse (NO_SESSION_ID, PERMISSION_DENIED)
 }
 
 interface HistoryEntry {
@@ -235,6 +255,91 @@ const DeviceStatusIcon = ({ type }: { type: string }) => {
   }
 };
 
+// Función para obtener el estado del tracking en background
+const getTrackingStatus = (alert: Alert) => {
+  // Solo mostrar para emergency o panic
+  if (alert.status !== 'emergency' && alert.status !== 'panic') {
+    return null;
+  }
+
+  // Si hay error de tracking
+  if (alert.trackingError) {
+    return {
+      status: 'error' as const,
+      text: `ERROR: ${alert.trackingError}`,
+      bgColor: 'bg-red-100',
+      textColor: 'text-red-700',
+      borderColor: 'border-red-300',
+      icon: '❌',
+      secondsAgo: null,
+    };
+  }
+
+  // Si no hay locationUpdatedAt, tracking no iniciado
+  if (!alert.locationUpdatedAt) {
+    return {
+      status: 'unknown' as const,
+      text: 'No data',
+      bgColor: 'bg-gray-100',
+      textColor: 'text-gray-600',
+      borderColor: 'border-gray-300',
+      icon: '❓',
+      secondsAgo: null,
+    };
+  }
+
+  // Calcular segundos desde la última actualización
+  const lastUpdate = new Date(alert.locationUpdatedAt).getTime();
+
+  // Safeguard: si la fecha es inválida, tratar como "No data"
+  if (isNaN(lastUpdate)) {
+    return {
+      status: 'unknown' as const,
+      text: 'No data',
+      bgColor: 'bg-gray-100',
+      textColor: 'text-gray-600',
+      borderColor: 'border-gray-300',
+      icon: '❓',
+      secondsAgo: null,
+    };
+  }
+
+  const now = Date.now();
+  const secondsAgo = Math.floor((now - lastUpdate) / 1000);
+
+  if (secondsAgo < 90) {
+    return {
+      status: 'ok' as const,
+      text: 'OK',
+      bgColor: 'bg-green-100',
+      textColor: 'text-green-700',
+      borderColor: 'border-green-300',
+      icon: '📍',
+      secondsAgo,
+    };
+  } else {
+    return {
+      status: 'stale' as const,
+      text: 'STALE',
+      bgColor: 'bg-yellow-100',
+      textColor: 'text-yellow-700',
+      borderColor: 'border-yellow-300',
+      icon: '⚠️',
+      secondsAgo,
+    };
+  }
+};
+
+// Helper para formatear "hace X segundos/minutos"
+const formatSecondsAgo = (seconds: number | null): string => {
+  if (seconds === null) return '';
+  if (seconds < 60) return `${seconds}s ago`;
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 60) return `${minutes}m ago`;
+  const hours = Math.floor(minutes / 60);
+  return `${hours}h ${minutes % 60}m ago`;
+};
+
 export default function AdminDashboard() {
   const router = useRouter();
   const [alerts, setAlerts] = useState<Alert[]>([]);
@@ -297,6 +402,18 @@ export default function AdminDashboard() {
 
   // Estado para contador de complaints pendientes
   const [pendingComplaintsCount, setPendingComplaintsCount] = useState(0);
+
+  // === LIVE TRACKING ===
+  const [showLiveTracking, setShowLiveTracking] = useState(false);
+  const [liveTrackingSessionId, setLiveTrackingSessionId] = useState<string | null>(null);
+  const [liveTrackingLocations, setLiveTrackingLocations] = useState<Array<{
+    latitude: number;
+    longitude: number;
+    timestamp: string;
+    accuracy?: number;
+    source?: string;
+  }>>([]);
+  const [liveTrackingLoading, setLiveTrackingLoading] = useState(false);
 
   // === PANIC ALERT SOUND ===
   // Refs para detectar nuevas alertas de pánico y reproducir sonido
@@ -747,7 +864,68 @@ export default function AdminDashboard() {
     setShowHistory(false);
     setShowAdvertiser(false);
     setShowPushNotifications(false);
+    setShowLiveTracking(false);
+    setLiveTrackingSessionId(null);
+    setLiveTrackingLocations([]);
   };
+
+  // ─────────── Live Tracking ───────────
+  const handleShowLiveTracking = (sessionId: string) => {
+    setLiveTrackingSessionId(sessionId);
+    setShowLiveTracking(true);
+    setLiveTrackingLoading(true);
+    setLiveTrackingLocations([]);
+  };
+
+  // Firestore onSnapshot subscription for live tracking
+  useEffect(() => {
+    if (!liveTrackingSessionId || !showLiveTracking || !db) {
+      return;
+    }
+
+    // Subscribe to the locations subcollection
+    // Backend stores: lat, lng, ts (not latitude, longitude, timestamp)
+    console.log('🔍 Subscribing to live tracking for session:', liveTrackingSessionId);
+    const locationsRef = collection(db, 'GuardianSessions', liveTrackingSessionId, 'locations');
+    const locationsQuery = query(locationsRef, orderBy('ts', 'desc'), limit(200));
+
+    const unsubscribe = onSnapshot(
+      locationsQuery,
+      (snapshot) => {
+        const rawLocations = snapshot.docs.map(doc => {
+          const data = doc.data() as { lat?: number; lng?: number; ts?: { toDate?: () => Date } | string; accuracy?: number; source?: string };
+          const timestamp = data.ts && typeof data.ts === 'object' && 'toDate' in data.ts
+            ? data.ts.toDate?.()?.toISOString() || ''
+            : (typeof data.ts === 'string' ? data.ts : '');
+          return { lat: data.lat, lng: data.lng, timestamp, accuracy: data.accuracy, source: data.source };
+        });
+
+        // Filter valid points and transform to expected format
+        const locations = rawLocations
+          .filter(p => typeof p.lat === 'number' && typeof p.lng === 'number' && !!p.timestamp)
+          .map(p => ({
+            latitude: p.lat!,
+            longitude: p.lng!,
+            timestamp: p.timestamp,
+            accuracy: p.accuracy,
+            source: p.source,
+          }));
+
+        // Query returns DESC (newest first), reverse for chronological trail (oldest to newest)
+        console.log(`📍 Live tracking: ${locations.length} valid points received`);
+        setLiveTrackingLocations(locations.reverse());
+        setLiveTrackingLoading(false);
+      },
+      (error) => {
+        console.error('Live tracking error for session:', liveTrackingSessionId, error);
+        setLiveTrackingLoading(false);
+      }
+    );
+
+    return () => {
+      unsubscribe();
+    };
+  }, [liveTrackingSessionId, showLiveTracking]);
 
   // ─────────── Funciones de Advertiser ───────────
   const fetchAdvertiserMessages = async () => {
@@ -2195,6 +2373,7 @@ Please respond immediately.`;
               {!isLoading && filteredAlerts.map((alert) => {
                 const statusDisplay = getStatusDisplay(alert.status);
                 const deviceStatus = getDeviceStatusDisplay(alert);
+                const trackingStatus = getTrackingStatus(alert);
 
                 // Colores de banner según estado de sesión
                 const getSessionBannerStyle = () => {
@@ -2309,6 +2488,22 @@ Please respond immediately.`;
                           >
                             <DeviceStatusIcon type={deviceStatus.icon} />
                             {deviceStatus.text}
+                          </span>
+                        </div>
+                      )}
+
+                      {/* Línea 4: Tracking Status Badge (solo para emergency/panic) */}
+                      {trackingStatus && (
+                        <div className={`mt-2 ${deviceStatus ? 'ml-0' : ''}`}>
+                          <span
+                            className={`inline-flex items-center gap-1 px-2 py-1 rounded text-[11px] font-medium ${trackingStatus.bgColor} ${trackingStatus.textColor} border ${trackingStatus.borderColor}`}
+                            title={trackingStatus.secondsAgo !== null ? `Location updated ${formatSecondsAgo(trackingStatus.secondsAgo)}` : 'Background location tracking status'}
+                          >
+                            <span>{trackingStatus.icon}</span>
+                            <span>Tracking: {trackingStatus.text}</span>
+                            {trackingStatus.secondsAgo !== null && (
+                              <span className="opacity-75">({formatSecondsAgo(trackingStatus.secondsAgo)})</span>
+                            )}
                           </span>
                         </div>
                       )}
@@ -2483,6 +2678,51 @@ Please respond immediately.`;
                   );
                 })()}
 
+                {/* Background Tracking Status (solo para emergency/panic) */}
+                {(() => {
+                  const trackingStatus = getTrackingStatus(selectedAlert);
+                  if (!trackingStatus) return null;
+
+                  return (
+                    <div className="border-t pt-3 mt-3">
+                      <div className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Background Location Tracking</div>
+                      <div className={`${trackingStatus.bgColor} ${trackingStatus.textColor} border ${trackingStatus.borderColor} rounded-lg p-3 flex items-center gap-3`}>
+                        <span className="text-xl">{trackingStatus.icon}</span>
+                        <div className="flex-1">
+                          <div className="font-semibold">
+                            Tracking: {trackingStatus.text}
+                            {trackingStatus.secondsAgo !== null && (
+                              <span className="font-normal ml-2 opacity-75">
+                                (updated {formatSecondsAgo(trackingStatus.secondsAgo)})
+                              </span>
+                            )}
+                          </div>
+                          {selectedAlert.locationSource && (
+                            <div className="text-xs opacity-75 mt-0.5">
+                              Source: {selectedAlert.locationSource === 'background_task' ? 'Background Task' : selectedAlert.locationSource}
+                            </div>
+                          )}
+                          {trackingStatus.status === 'error' && (
+                            <div className="text-xs mt-1">
+                              User device could not start background tracking. Location will only update when app is open.
+                            </div>
+                          )}
+                          {trackingStatus.status === 'stale' && (
+                            <div className="text-xs mt-1">
+                              Location updates may have stopped. Check if user force-closed the app.
+                            </div>
+                          )}
+                          {trackingStatus.status === 'ok' && (
+                            <div className="text-xs mt-1">
+                              ✓ Location is being actively tracked in background.
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })()}
+
                 {/* Timeline - Complete Session History */}
                 <div className="border-t pt-3 mt-3">
                   <div className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Session Timeline</div>
@@ -2652,6 +2892,20 @@ Please respond immediately.`;
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
                       </svg>
                       Call Emergency Contact
+                    </button>
+                  )}
+
+                  {/* Live Track Button - Only for emergency/panic */}
+                  {(selectedAlert.status === 'emergency' || selectedAlert.status === 'panic') && (
+                    <button
+                      onClick={() => handleShowLiveTracking(selectedAlert.sessionId || selectedAlert.id)}
+                      className="flex items-center gap-2 bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg font-medium transition-colors"
+                    >
+                      <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                      </svg>
+                      Live Track
                     </button>
                   )}
 
@@ -2989,6 +3243,97 @@ Please respond immediately.`;
                     </>
                   )}
                 </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal: Live Tracking */}
+      {showLiveTracking && selectedAlert && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[9999] p-4">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] flex flex-col">
+            {/* Header */}
+            <div className={`px-6 py-4 flex items-center justify-between flex-shrink-0 ${
+              selectedAlert.status === 'panic' ? 'bg-yellow-500' : 'bg-red-600'
+            }`}>
+              <div className="flex items-center gap-3">
+                <div className="w-3 h-3 rounded-full bg-white animate-pulse" />
+                <h2 className="text-xl font-bold text-white">
+                  Live Tracking - {selectedAlert.userNickname || selectedAlert.userName}
+                </h2>
+                <span className={`px-2 py-1 rounded text-xs font-bold ${
+                  selectedAlert.status === 'panic' ? 'bg-yellow-600 text-white' : 'bg-red-700 text-white'
+                }`}>
+                  {selectedAlert.status === 'panic' ? 'PANIC' : 'EMERGENCY'}
+                </span>
+              </div>
+              <button
+                onClick={() => {
+                  setShowLiveTracking(false);
+                  setLiveTrackingSessionId(null);
+                  setLiveTrackingLocations([]);
+                }}
+                className="text-white/80 hover:text-white"
+              >
+                <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            {/* User Info Bar */}
+            <div className="px-6 py-3 bg-gray-50 border-b flex items-center gap-4 flex-shrink-0">
+              <img
+                src={selectedAlert.userPhotoUrl || '/placeholder-user.png'}
+                alt={selectedAlert.userName}
+                className="w-10 h-10 rounded-full object-cover ring-2 ring-purple-500"
+              />
+              <div className="flex-1">
+                <p className="font-semibold text-gray-900">{selectedAlert.userNickname || selectedAlert.userName}</p>
+                <p className="text-sm text-gray-500">{selectedAlert.userPhone}</p>
+              </div>
+              <div className="text-right">
+                <p className="text-xs text-gray-500">With</p>
+                <p className="font-medium text-gray-700">{selectedAlert.dateName}</p>
+              </div>
+              <div className="text-right">
+                <p className="text-xs text-gray-500">Location</p>
+                <p className="font-medium text-gray-700 text-sm">{selectedAlert.dateAddress || selectedAlert.dateLocation}</p>
+              </div>
+            </div>
+
+            {/* Map Container */}
+            <div className="flex-1 min-h-0 p-4">
+              <div className="h-full min-h-[400px]">
+                <LiveTrackingMap
+                  locations={liveTrackingLocations}
+                  userName={selectedAlert.userNickname || selectedAlert.userName}
+                  status={selectedAlert.status as 'emergency' | 'panic'}
+                  isLoading={liveTrackingLoading}
+                  lastUpdated={liveTrackingLocations[liveTrackingLocations.length - 1]?.timestamp}
+                />
+              </div>
+            </div>
+
+            {/* Footer Stats */}
+            <div className="px-6 py-3 bg-gray-50 border-t flex items-center justify-between flex-shrink-0">
+              <div className="flex items-center gap-4">
+                <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 rounded-full bg-purple-500" />
+                  <span className="text-sm text-gray-600">{liveTrackingLocations.length} location points</span>
+                </div>
+                {liveTrackingLocations.length > 0 && (
+                  <div className="flex items-center gap-2">
+                    <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+                    <span className="text-sm text-gray-600">
+                      Last update: {new Date(liveTrackingLocations[liveTrackingLocations.length - 1]?.timestamp).toLocaleTimeString()}
+                    </span>
+                  </div>
+                )}
+              </div>
+              <div className="text-xs text-gray-500">
+                Real-time updates via Firestore
               </div>
             </div>
           </div>
