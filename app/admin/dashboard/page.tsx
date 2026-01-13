@@ -419,6 +419,7 @@ export default function AdminDashboard() {
   const panicAudioRef = useRef<HTMLAudioElement | null>(null);
   const panicSoundTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const [isPanicSoundPlaying, setIsPanicSoundPlaying] = useState(false);
+  const [isPanicSoundMuted, setIsPanicSoundMuted] = useState(false); // Track if user manually muted
 
   // AudioContext global que se pre-calienta con cualquier interacción del usuario
   const globalAudioContextRef = useRef<AudioContext | null>(null);
@@ -721,21 +722,33 @@ export default function AdminDashboard() {
     const currentPanicAlerts = alerts.filter(a => a.status === 'panic');
     const currentPanicIds = new Set(currentPanicAlerts.map(a => a.id));
 
-    // Buscar alertas de pánico NUEVAS
+    // Buscar alertas de pánico NUEVAS (que no existían antes)
     const newPanicAlerts = currentPanicAlerts.filter(
       a => !previousPanicAlertIdsRef.current.has(a.id)
     );
 
-    // Si hay alertas de pánico (nuevas o existentes) y no está sonando
-    if (currentPanicAlerts.length > 0 && !isPanicSoundPlaying) {
+    // Si hay NUEVAS alertas de pánico, resetear el estado de mute para que suene
+    if (newPanicAlerts.length > 0 && isPanicSoundMuted) {
+      console.log('🆘 NUEVA alerta de pánico detectada - Reseteando mute');
+      setIsPanicSoundMuted(false);
+    }
+
+    // Si hay alertas de pánico, no está sonando, y NO está muteado manualmente
+    if (currentPanicAlerts.length > 0 && !isPanicSoundPlaying && !isPanicSoundMuted) {
       console.log('🆘 PÁNICO DETECTADO - Alertas:', currentPanicAlerts.length, 'Nuevas:', newPanicAlerts.length);
       setIsPanicSoundPlaying(true);
       playAlarmSound();
     }
 
-    // Si ya no hay alertas de pánico, detener el sonido
-    if (currentPanicAlerts.length === 0 && isPanicSoundPlaying) {
-      stopPanicSound();
+    // Si ya no hay alertas de pánico, resetear estados
+    if (currentPanicAlerts.length === 0) {
+      if (isPanicSoundPlaying) {
+        stopPanicSound();
+      }
+      // Resetear mute cuando no hay más alertas de pánico
+      if (isPanicSoundMuted) {
+        setIsPanicSoundMuted(false);
+      }
     }
 
     previousPanicAlertIdsRef.current = currentPanicIds;
@@ -745,11 +758,11 @@ export default function AdminDashboard() {
         clearTimeout(panicSoundTimeoutRef.current);
       }
     };
-  }, [alerts, isPanicSoundPlaying, playAlarmSound]);
+  }, [alerts, isPanicSoundPlaying, isPanicSoundMuted, playAlarmSound]);
 
   // Función para detener manualmente el sonido de pánico
-  const stopPanicSound = useCallback(() => {
-    console.log('🔇 Deteniendo alarma manualmente...');
+  const stopPanicSound = useCallback((manualMute: boolean = false) => {
+    console.log('🔇 Deteniendo alarma...', manualMute ? '(mute manual)' : '(automático)');
     shouldPlayAlarmRef.current = false; // Detener el loop de beeps
     if (panicSoundTimeoutRef.current) {
       clearTimeout(panicSoundTimeoutRef.current);
@@ -769,7 +782,11 @@ export default function AdminDashboard() {
       }
     }
     setIsPanicSoundPlaying(false);
-    console.log('🔇 Sonido de pánico detenido manualmente');
+    // Si fue mute manual, marcar como muteado para que no reinicie
+    if (manualMute) {
+      setIsPanicSoundMuted(true);
+      console.log('🔇 Alarma muteada manualmente - no reiniciará hasta nueva alerta');
+    }
   }, []);
 
   // Fetch pending complaints count
@@ -1522,7 +1539,7 @@ Please respond immediately.`;
       {/* Floating Mute Button for Panic Alert Sound */}
       {isPanicSoundPlaying && (
         <button
-          onClick={stopPanicSound}
+          onClick={() => stopPanicSound(true)}
           className="fixed top-20 right-4 z-[9999] flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white px-4 py-3 rounded-xl shadow-2xl animate-pulse transition-all"
           title="Click to mute panic alert"
         >
