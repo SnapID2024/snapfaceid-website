@@ -881,7 +881,7 @@ export default function AdminDashboard() {
       return;
     }
 
-    const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://mi-app-backend-production-b5fa.up.railway.app';
+    const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://api.snapfaceid.com';
 
     const fetchLocations = async () => {
       try {
