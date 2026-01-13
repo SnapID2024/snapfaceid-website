@@ -2744,11 +2744,11 @@ Please respond immediately.`;
                       )}
                     </div>
 
-                    {/* Timer Expired / Verification Started */}
-                    {selectedAlert.timerExpiresAt && (
+                    {/* Timer Expiration - only show if no panic (panic interrupts the timer) */}
+                    {selectedAlert.timerExpiresAt && !selectedAlert.panicAt && (
                       <div className="flex items-center gap-2">
                         <div className="w-2 h-2 rounded-full bg-yellow-500 flex-shrink-0" />
-                        <span className="text-gray-600">Timer Expired:</span>
+                        <span className="text-gray-600">Timer will Expire:</span>
                         <span className="font-medium text-yellow-700">{formatTime(selectedAlert.timerExpiresAt)}</span>
                       </div>
                     )}
