@@ -210,15 +210,16 @@ export default function LiveTrackingMap({
       markersRef.current.push(latestMarker);
     }
 
-    // Center map on latest location
-    map.setView([latestLoc.latitude, latestLoc.longitude], 16, { animate: true });
-
-    // If multiple points, fit bounds to show all
+    // Center map - only ONE zoom operation to avoid dizziness effect
     if (latLngs.length > 1 && polylineRef.current) {
+      // Multiple points: fit bounds to show the entire trail
       const bounds = polylineRef.current.getBounds();
       if (bounds.isValid()) {
-        map.fitBounds(bounds, { padding: [50, 50], maxZoom: 17 });
+        map.fitBounds(bounds, { padding: [50, 50], maxZoom: 17, animate: false });
       }
+    } else {
+      // Single point: center on that location
+      map.setView([latestLoc.latitude, latestLoc.longitude], 16, { animate: false });
     }
 
   }, [locations, mapReady, userName, status]);
