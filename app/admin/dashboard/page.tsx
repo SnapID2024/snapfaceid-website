@@ -693,7 +693,7 @@ export default function AdminDashboard() {
       }, 500);
 
       // Guardar referencia para poder detener
-      (panicAudioRef.current as any) = { audioContext, beepInterval };
+      panicAudioRef.current = { audioContext, beepInterval } as any;
 
       // Auto-detener después de 30 segundos
       panicSoundTimeoutRef.current = setTimeout(() => {
