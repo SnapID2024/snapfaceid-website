@@ -112,7 +112,7 @@ export default function PublicTrackingPage() {
   const [error, setError] = useState<string | null>(null);
   const [lastFetched, setLastFetched] = useState<Date | null>(null);
 
-  const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://mi-app-backend-production-b5fa.up.railway.app';
+  const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://api.snapfaceid.com';
 
   const fetchTrackingData = useCallback(async () => {
     if (!token) return;
