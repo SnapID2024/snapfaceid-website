@@ -18,12 +18,13 @@ interface LiveTrackingMapProps {
   status?: 'emergency' | 'panic' | 'safe';
   isLoading?: boolean;
   lastUpdated?: string;
-  originAddress?: string; // Optional: address where user said they would be
+  originAddress?: string;
 }
 
 // Constants
-const FIFTY_FEET_IN_METERS = 15.24; // 50 feet = 15.24 meters
+const FIFTY_FEET_IN_METERS = 15.24;
 const MOVEMENT_THRESHOLD_METERS = FIFTY_FEET_IN_METERS;
+const MAX_SNAP_DISTANCE_METERS = 50; // Max distance from road to be considered "on road"
 
 // Format timestamp for display
 const formatTime = (timestamp: string): string => {
@@ -62,7 +63,7 @@ const calculateDistance = (
   lat1: number, lon1: number,
   lat2: number, lon2: number
 ): number => {
-  const R = 6371000; // Earth's radius in meters
+  const R = 6371000;
   const dLat = (lat2 - lat1) * Math.PI / 180;
   const dLon = (lon2 - lon1) * Math.PI / 180;
   const a =
@@ -73,7 +74,7 @@ const calculateDistance = (
   return R * c;
 };
 
-// Filter locations: remove points that haven't moved significantly from origin
+// Filter locations by movement
 const filterLocationsByMovement = (
   locations: LocationPoint[],
   thresholdMeters: number
@@ -82,7 +83,6 @@ const filterLocationsByMovement = (
     return { filtered: [], hasSignificantMovement: false };
   }
 
-  // Sort by timestamp (oldest first)
   const sorted = [...locations].sort((a, b) =>
     new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
   );
@@ -99,25 +99,20 @@ const filterLocationsByMovement = (
       point.latitude, point.longitude
     );
 
-    // Check if this point is significantly far from origin
     if (distanceFromOrigin > thresholdMeters) {
       hasSignificantMovement = true;
-
-      // Check if this point is significantly far from last significant point
       const distanceFromLast = calculateDistance(
         lastSignificantPoint.latitude, lastSignificantPoint.longitude,
         point.latitude, point.longitude
       );
 
-      // Add point if it's moved at least threshold from last significant point
-      if (distanceFromLast > thresholdMeters / 2) { // Use half threshold for trail continuity
+      if (distanceFromLast > thresholdMeters / 2) {
         filtered.push(point);
         lastSignificantPoint = point;
       }
     }
   }
 
-  // Always include the latest point if there's movement
   const latestPoint = sorted[sorted.length - 1];
   if (hasSignificantMovement && filtered[filtered.length - 1] !== latestPoint) {
     filtered.push(latestPoint);
@@ -129,9 +124,9 @@ const filterLocationsByMovement = (
 // Create custom marker icon
 const createMarkerIcon = (type: 'start' | 'latest' | 'point', status?: string) => {
   const colors = {
-    start: '#6B7280',    // Gray
-    latest: status === 'panic' ? '#EAB308' : '#DC2626', // Yellow for panic, Red for emergency
-    point: '#9333EA',    // Purple
+    start: '#6B7280',
+    latest: status === 'panic' ? '#EAB308' : '#DC2626',
+    point: '#9333EA',
   };
 
   const color = colors[type];
@@ -157,6 +152,12 @@ const createMarkerIcon = (type: 'start' | 'latest' | 'point', status?: string) =
   });
 };
 
+// Interface for road segments
+interface RoadSegment {
+  points: [number, number][];
+  isOnRoad: boolean;
+}
+
 export default function LiveTrackingMap({
   locations,
   userName = 'User',
@@ -167,8 +168,7 @@ export default function LiveTrackingMap({
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<L.Map | null>(null);
   const markersRef = useRef<L.Marker[]>([]);
-  const polylineRef = useRef<L.Polyline | null>(null);
-  const snappedPolylineRef = useRef<L.Polyline | null>(null);
+  const polylinesRef = useRef<L.Polyline[]>([]);
   const [mapReady, setMapReady] = useState(false);
 
   // Manual zoom control states
@@ -176,10 +176,10 @@ export default function LiveTrackingMap({
   const isUserInteractingRef = useRef(false);
   const interactionTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Snap to road state
-  const [snappedPoints, setSnappedPoints] = useState<[number, number][] | null>(null);
-  const [isSnapping, setIsSnapping] = useState(false);
-  const lastSnappedLocationsRef = useRef<string>('');
+  // Road segments state
+  const [roadSegments, setRoadSegments] = useState<RoadSegment[]>([]);
+  const [isProcessingRoads, setIsProcessingRoads] = useState(false);
+  const lastProcessedLocationsRef = useRef<string>('');
 
   // Filter locations by movement
   const { filtered: filteredLocations, hasSignificantMovement } = filterLocationsByMovement(
@@ -187,47 +187,90 @@ export default function LiveTrackingMap({
     MOVEMENT_THRESHOLD_METERS
   );
 
-  // Snap to roads using Google Roads API
-  const snapToRoads = useCallback(async (points: [number, number][]) => {
-    if (points.length < 2) return null;
+  // Snap to roads and create segments
+  const processRoadSegments = useCallback(async (points: [number, number][]): Promise<RoadSegment[]> => {
+    if (points.length < 2) return [];
 
     const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
     if (!apiKey) {
-      console.warn('Google Maps API key not configured for snap-to-road');
-      return null;
+      // No API key - return single segment with all points (no road snapping)
+      return [{ points, isOnRoad: false }];
     }
 
     try {
-      // Google Roads API has a limit of 100 points per request
+      // Google Roads API limit is 100 points
       const maxPoints = 100;
       const sampledPoints = points.length > maxPoints
         ? points.filter((_, i) => i % Math.ceil(points.length / maxPoints) === 0 || i === points.length - 1)
         : points;
 
-      // Format path for Roads API: lat,lng|lat,lng|...
       const path = sampledPoints.map(p => `${p[0]},${p[1]}`).join('|');
 
       const response = await fetch(
-        `https://roads.googleapis.com/v1/snapToRoads?path=${path}&interpolate=true&key=${apiKey}`
+        `https://roads.googleapis.com/v1/snapToRoads?path=${path}&interpolate=false&key=${apiKey}`
       );
 
       if (!response.ok) {
-        console.warn('Roads API request failed:', response.status);
-        return null;
+        return [{ points, isOnRoad: false }];
       }
 
       const data = await response.json();
 
-      if (data.snappedPoints && data.snappedPoints.length > 0) {
-        return data.snappedPoints.map((p: { location: { latitude: number; longitude: number } }) =>
-          [p.location.latitude, p.location.longitude] as [number, number]
-        );
+      if (!data.snappedPoints || data.snappedPoints.length === 0) {
+        return [{ points, isOnRoad: false }];
       }
 
-      return null;
+      // Build a map of originalIndex -> snappedLocation
+      const snappedMap = new Map<number, [number, number]>();
+
+      for (const sp of data.snappedPoints) {
+        const idx = sp.originalIndex;
+        const snappedLat = sp.location.latitude;
+        const snappedLng = sp.location.longitude;
+        const originalLat = sampledPoints[idx][0];
+        const originalLng = sampledPoints[idx][1];
+
+        // Check if snapped point is close enough to original (within MAX_SNAP_DISTANCE_METERS)
+        const distance = calculateDistance(originalLat, originalLng, snappedLat, snappedLng);
+
+        if (distance <= MAX_SNAP_DISTANCE_METERS) {
+          snappedMap.set(idx, [snappedLat, snappedLng]);
+        }
+      }
+
+      // Build segments: consecutive points that are both on roads form a road segment
+      const segments: RoadSegment[] = [];
+      let currentSegment: RoadSegment | null = null;
+
+      for (let i = 0; i < sampledPoints.length; i++) {
+        const isOnRoad = snappedMap.has(i);
+        const pointToUse: [number, number] = isOnRoad ? snappedMap.get(i)! : sampledPoints[i];
+
+        if (currentSegment === null) {
+          // Start a new segment
+          currentSegment = { points: [pointToUse], isOnRoad };
+        } else if (currentSegment.isOnRoad === isOnRoad) {
+          // Continue current segment
+          currentSegment.points.push(pointToUse);
+        } else {
+          // Segment type changed - save current and start new
+          // Add connecting point to both segments for continuity
+          if (currentSegment.points.length > 0) {
+            segments.push(currentSegment);
+          }
+          currentSegment = { points: [pointToUse], isOnRoad };
+        }
+      }
+
+      // Don't forget the last segment
+      if (currentSegment && currentSegment.points.length > 0) {
+        segments.push(currentSegment);
+      }
+
+      return segments;
     } catch (error) {
-      console.warn('Error snapping to roads:', error);
-      return null;
+      console.warn('Error processing road segments:', error);
+      return [{ points, isOnRoad: false }];
     }
   }, []);
 
@@ -238,13 +281,16 @@ export default function LiveTrackingMap({
     if (!mapInstanceRef.current) return;
     const map = mapInstanceRef.current;
 
-    // Use snapped polyline bounds if available, otherwise use regular polyline
-    const polyline = snappedPolylineRef.current || polylineRef.current;
-
-    if (polyline) {
-      const bounds = polyline.getBounds();
-      if (bounds.isValid()) {
-        map.fitBounds(bounds, { padding: [50, 50], maxZoom: 17, animate: true });
+    if (polylinesRef.current.length > 0) {
+      const allBounds = L.latLngBounds([]);
+      polylinesRef.current.forEach(pl => {
+        const bounds = pl.getBounds();
+        if (bounds.isValid()) {
+          allBounds.extend(bounds);
+        }
+      });
+      if (allBounds.isValid()) {
+        map.fitBounds(allBounds, { padding: [50, 50], maxZoom: 17, animate: true });
       }
     } else if (filteredLocations.length > 0) {
       const latestLoc = filteredLocations[filteredLocations.length - 1];
@@ -263,16 +309,13 @@ export default function LiveTrackingMap({
       minZoom: 2,
     }).setView([25.7617, -80.1918], 15);
 
-    // CartoDB Positron - clean white/minimal style
     L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
       maxZoom: 19,
       attribution: '&copy; OpenStreetMap &copy; CartoDB',
     }).addTo(map);
 
-    // Add zoom control on right
     L.control.zoom({ position: 'topright' }).addTo(map);
 
-    // Detect user interaction to enable manual zoom mode
     const handleInteractionStart = () => {
       isUserInteractingRef.current = true;
       if (interactionTimeoutRef.current) {
@@ -289,7 +332,6 @@ export default function LiveTrackingMap({
       }, 100);
     };
 
-    // Listen for user interactions
     map.on('zoomstart', handleInteractionStart);
     map.on('dragstart', handleInteractionStart);
     map.on('zoomend', handleInteractionEnd);
@@ -298,7 +340,6 @@ export default function LiveTrackingMap({
     mapInstanceRef.current = map;
     setMapReady(true);
 
-    // Add custom CSS for pulse animation
     const style = document.createElement('style');
     style.textContent = `
       @keyframes pulse {
@@ -324,31 +365,29 @@ export default function LiveTrackingMap({
     };
   }, []);
 
-  // Snap to roads when filtered locations change
+  // Process road segments when locations change
   useEffect(() => {
     if (!hasSignificantMovement || filteredLocations.length < 2) {
-      setSnappedPoints(null);
+      setRoadSegments([]);
       return;
     }
 
     const locationsKey = filteredLocations.map(l => `${l.latitude},${l.longitude}`).join('|');
-    if (locationsKey === lastSnappedLocationsRef.current) {
-      return; // Already snapped these locations
+    if (locationsKey === lastProcessedLocationsRef.current) {
+      return;
     }
 
-    const doSnap = async () => {
-      setIsSnapping(true);
+    const process = async () => {
+      setIsProcessingRoads(true);
       const latLngs: [number, number][] = filteredLocations.map(loc => [loc.latitude, loc.longitude]);
-      const snapped = await snapToRoads(latLngs);
-      if (snapped) {
-        setSnappedPoints(snapped);
-        lastSnappedLocationsRef.current = locationsKey;
-      }
-      setIsSnapping(false);
+      const segments = await processRoadSegments(latLngs);
+      setRoadSegments(segments);
+      lastProcessedLocationsRef.current = locationsKey;
+      setIsProcessingRoads(false);
     };
 
-    doSnap();
-  }, [filteredLocations, hasSignificantMovement, snapToRoads]);
+    process();
+  }, [filteredLocations, hasSignificantMovement, processRoadSegments]);
 
   // Update markers and trail when locations change
   useEffect(() => {
@@ -360,59 +399,47 @@ export default function LiveTrackingMap({
     markersRef.current = [];
 
     // Clear existing polylines
-    if (polylineRef.current) {
-      polylineRef.current.remove();
-      polylineRef.current = null;
-    }
-    if (snappedPolylineRef.current) {
-      snappedPolylineRef.current.remove();
-      snappedPolylineRef.current = null;
-    }
+    polylinesRef.current.forEach(pl => pl.remove());
+    polylinesRef.current = [];
 
     if (filteredLocations.length === 0) return;
 
-    // Sort locations by timestamp (oldest first)
     const sortedLocations = [...filteredLocations].sort((a, b) =>
       new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
     );
 
-    // Create polyline coordinates
-    const latLngs: [number, number][] = sortedLocations.map(loc => [loc.latitude, loc.longitude]);
-
-    // Draw trail polyline
-    if (latLngs.length > 1) {
-      // If we have snapped points, draw the snapped polyline (purple, on roads)
-      if (snappedPoints && snappedPoints.length > 1) {
-        snappedPolylineRef.current = L.polyline(snappedPoints, {
-          color: '#9333EA', // Purple - road-snapped trail
-          weight: 5,
-          opacity: 0.9,
+    // Draw road segments
+    if (roadSegments.length > 0) {
+      roadSegments.forEach(segment => {
+        if (segment.points.length > 1) {
+          const polyline = L.polyline(segment.points, {
+            color: segment.isOnRoad ? '#9333EA' : '#D1D5DB', // Purple for roads, light gray for off-road
+            weight: segment.isOnRoad ? 5 : 2,
+            opacity: segment.isOnRoad ? 0.9 : 0.5,
+            lineCap: 'round',
+            lineJoin: 'round',
+            dashArray: segment.isOnRoad ? undefined : '5, 8', // Dashed for off-road
+          }).addTo(map);
+          polylinesRef.current.push(polyline);
+        }
+      });
+    } else if (hasSignificantMovement) {
+      // Fallback: draw simple line if no road segments processed yet
+      const latLngs: [number, number][] = sortedLocations.map(loc => [loc.latitude, loc.longitude]);
+      if (latLngs.length > 1) {
+        const polyline = L.polyline(latLngs, {
+          color: '#D1D5DB',
+          weight: 3,
+          opacity: 0.6,
           lineCap: 'round',
           lineJoin: 'round',
+          dashArray: '5, 8',
         }).addTo(map);
-
-        // Also draw a lighter original trail for reference (optional, can be removed)
-        polylineRef.current = L.polyline(latLngs, {
-          color: '#D8B4FE', // Light purple - original GPS points
-          weight: 2,
-          opacity: 0.4,
-          dashArray: '5, 10',
-          lineCap: 'round',
-          lineJoin: 'round',
-        }).addTo(map);
-      } else {
-        // No snapped points, use original polyline
-        polylineRef.current = L.polyline(latLngs, {
-          color: '#9333EA', // Purple
-          weight: 4,
-          opacity: 0.8,
-          lineCap: 'round',
-          lineJoin: 'round',
-        }).addTo(map);
+        polylinesRef.current.push(polyline);
       }
     }
 
-    // Add start marker (first location)
+    // Add start marker
     const startLoc = sortedLocations[0];
     const startMarker = L.marker(
       [startLoc.latitude, startLoc.longitude],
@@ -426,7 +453,7 @@ export default function LiveTrackingMap({
     `);
     markersRef.current.push(startMarker);
 
-    // Add latest marker (last location)
+    // Add latest marker
     const latestLoc = sortedLocations[sortedLocations.length - 1];
     if (sortedLocations.length > 1 || !hasSignificantMovement) {
       const latestMarker = L.marker(
@@ -444,28 +471,32 @@ export default function LiveTrackingMap({
       markersRef.current.push(latestMarker);
     }
 
-    // Center map ONLY if not in manual zoom mode
+    // Center map if not in manual zoom mode
     if (!isManualZoom) {
-      // Use snapped polyline bounds if available
-      const boundsPolyline = snappedPolylineRef.current || polylineRef.current;
-
-      if (boundsPolyline && latLngs.length > 1) {
-        const bounds = boundsPolyline.getBounds();
-        if (bounds.isValid()) {
-          map.fitBounds(bounds, { padding: [50, 50], maxZoom: 17, animate: false });
+      if (polylinesRef.current.length > 0) {
+        const allBounds = L.latLngBounds([]);
+        polylinesRef.current.forEach(pl => {
+          const bounds = pl.getBounds();
+          if (bounds.isValid()) {
+            allBounds.extend(bounds);
+          }
+        });
+        if (allBounds.isValid()) {
+          map.fitBounds(allBounds, { padding: [50, 50], maxZoom: 17, animate: false });
         }
       } else {
-        // Single point: center on that location
         map.setView([latestLoc.latitude, latestLoc.longitude], 16, { animate: false });
       }
     }
 
-  }, [filteredLocations, mapReady, userName, status, isManualZoom, snappedPoints, hasSignificantMovement]);
+  }, [filteredLocations, mapReady, userName, status, isManualZoom, roadSegments, hasSignificantMovement]);
 
-  // Calculate display stats
   const totalPoints = locations.length;
   const displayedPoints = filteredLocations.length;
   const filteredOut = totalPoints - displayedPoints;
+
+  // Check if we have any road segments
+  const hasRoadSegments = roadSegments.some(s => s.isOnRoad && s.points.length > 1);
 
   return (
     <div className="relative w-full h-full">
@@ -482,14 +513,12 @@ export default function LiveTrackingMap({
             ({timeAgo(lastUpdated)})
           </span>
         )}
-        {isSnapping && (
-          <span className="text-xs text-purple-500 ml-1">
-            (mapping route...)
-          </span>
+        {isProcessingRoads && (
+          <span className="text-xs text-purple-500 ml-1">(mapping...)</span>
         )}
       </div>
 
-      {/* Auto View Button - shows when in manual zoom mode */}
+      {/* Auto View Button */}
       {isManualZoom && filteredLocations.length > 0 && (
         <div className="absolute top-4 right-16 z-[1000]">
           <button
@@ -536,20 +565,6 @@ export default function LiveTrackingMap({
         </div>
       )}
 
-      {/* Stationary indicator - when user hasn't moved significantly */}
-      {!isLoading && locations.length > 0 && !hasSignificantMovement && (
-        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-blue-50 border border-blue-200 rounded-xl px-4 py-3 shadow-lg z-[1000] max-w-xs text-center pointer-events-none">
-          <div className="flex items-center justify-center gap-2 mb-1">
-            <svg className="w-5 h-5 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-            </svg>
-            <span className="text-sm font-medium text-blue-700">Stationary</span>
-          </div>
-          <p className="text-xs text-blue-600">User has not moved significantly from starting location</p>
-        </div>
-      )}
-
       {/* Legend */}
       <div className="absolute bottom-4 left-4 bg-white/95 backdrop-blur-sm rounded-lg p-3 shadow-lg z-[1000]">
         <div className="text-xs font-semibold text-gray-700 mb-2">Legend</div>
@@ -563,12 +578,18 @@ export default function LiveTrackingMap({
             <span className="text-xs text-gray-600">Current location</span>
           </div>
           {hasSignificantMovement && (
-            <div className="flex items-center gap-2">
-              <div className="w-6 h-1 bg-purple-600 rounded" />
-              <span className="text-xs text-gray-600">
-                {snappedPoints ? 'Road trail' : 'Movement trail'}
-              </span>
-            </div>
+            <>
+              {hasRoadSegments && (
+                <div className="flex items-center gap-2">
+                  <div className="w-6 h-1 bg-purple-600 rounded" />
+                  <span className="text-xs text-gray-600">On road</span>
+                </div>
+              )}
+              <div className="flex items-center gap-2">
+                <div className="w-6 h-0.5 bg-gray-300 rounded" style={{ borderStyle: 'dashed' }} />
+                <span className="text-xs text-gray-600">Off road / park</span>
+              </div>
+            </>
           )}
         </div>
       </div>
