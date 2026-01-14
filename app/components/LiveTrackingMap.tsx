@@ -22,8 +22,7 @@ interface LiveTrackingMapProps {
 }
 
 // Constants
-const FIFTY_FEET_IN_METERS = 15.24;
-const MOVEMENT_THRESHOLD_METERS = FIFTY_FEET_IN_METERS;
+const MOVEMENT_THRESHOLD_METERS = 5; // 5 meters - low threshold to show trail more often
 const MAX_SNAP_DISTANCE_METERS = 50; // Max distance from road to be considered "on road"
 
 // Format timestamp for display
@@ -424,19 +423,33 @@ export default function LiveTrackingMap({
         }
       });
     } else if (hasSignificantMovement) {
-      // Fallback: draw simple line if no road segments processed yet
+      // Fallback: draw purple line if no road segments processed yet
       const latLngs: [number, number][] = sortedLocations.map(loc => [loc.latitude, loc.longitude]);
       if (latLngs.length > 1) {
         const polyline = L.polyline(latLngs, {
-          color: '#D1D5DB',
-          weight: 3,
-          opacity: 0.6,
+          color: '#9333EA', // Purple - same as on-road color
+          weight: 4,
+          opacity: 0.8,
           lineCap: 'round',
           lineJoin: 'round',
-          dashArray: '5, 8',
         }).addTo(map);
         polylinesRef.current.push(polyline);
       }
+    } else if (locations.length > 1) {
+      // Even for minimal movement, show a light purple dashed trail using all raw locations
+      const allLocationsSorted = [...locations].sort((a, b) =>
+        new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
+      );
+      const latLngs: [number, number][] = allLocationsSorted.map(loc => [loc.latitude, loc.longitude]);
+      const polyline = L.polyline(latLngs, {
+        color: '#A855F7', // Light purple
+        weight: 3,
+        opacity: 0.5,
+        lineCap: 'round',
+        lineJoin: 'round',
+        dashArray: '5, 8',
+      }).addTo(map);
+      polylinesRef.current.push(polyline);
     }
 
     // Add start marker
@@ -489,7 +502,7 @@ export default function LiveTrackingMap({
       }
     }
 
-  }, [filteredLocations, mapReady, userName, status, isManualZoom, roadSegments, hasSignificantMovement]);
+  }, [filteredLocations, locations, mapReady, userName, status, isManualZoom, roadSegments, hasSignificantMovement]);
 
   const totalPoints = locations.length;
   const displayedPoints = filteredLocations.length;
