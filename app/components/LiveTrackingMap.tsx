@@ -192,8 +192,8 @@ export default function LiveTrackingMap({
 
     const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
     if (!apiKey) {
-      // No API key - return single segment with all points (no road snapping)
-      return [{ points, isOnRoad: false }];
+      // No API key - return single segment with all points as "on road" (purple trail)
+      return [{ points, isOnRoad: true }];
     }
 
     try {
@@ -210,13 +210,15 @@ export default function LiveTrackingMap({
       );
 
       if (!response.ok) {
-        return [{ points, isOnRoad: false }];
+        // API error - default to purple trail
+        return [{ points, isOnRoad: true }];
       }
 
       const data = await response.json();
 
       if (!data.snappedPoints || data.snappedPoints.length === 0) {
-        return [{ points, isOnRoad: false }];
+        // No road data available - default to purple trail
+        return [{ points, isOnRoad: true }];
       }
 
       // Build a map of originalIndex -> snappedLocation
@@ -269,7 +271,8 @@ export default function LiveTrackingMap({
       return segments;
     } catch (error) {
       console.warn('Error processing road segments:', error);
-      return [{ points, isOnRoad: false }];
+      // Error occurred - default to purple trail
+      return [{ points, isOnRoad: true }];
     }
   }, []);
 
