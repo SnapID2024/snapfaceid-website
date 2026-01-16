@@ -45,6 +45,7 @@ interface Alert {
   datePhone: string;
   locationType?: string;  // Tipo de ubicación (Restaurant, Bar, etc.)
   dateAddress?: string;   // Dirección completa
+  unitNumber?: string;    // Número de apartamento, habitación de hotel, o nombre del bote
   dateLocation: string;   // Combinado para compatibilidad
   activatedAt: string;
   lastCheckIn: string;
@@ -1402,14 +1403,15 @@ Please respond immediately.`;
       return;
     }
 
-    const { userName, userNickname, userPhone, userPhotoUrl, dateName, datePhone, datePhotoUrl, dateLocation, locationType, dateAddress, currentLocation, emergencyContactName, emergencyContactPhone, lastCheckIn } = selectedAlert;
+    const { userName, userNickname, userPhone, userPhotoUrl, dateName, datePhone, datePhotoUrl, dateLocation, locationType, dateAddress, unitNumber, currentLocation, emergencyContactName, emergencyContactPhone, lastCheckIn } = selectedAlert;
     const displayName = userNickname || userName;
 
     // Limpiar el número de teléfono (solo dígitos y +)
     const cleanPhone = smsRecipientPhone.replace(/[^\d+]/g, '');
 
-    // Formatear ubicación
-    const location = `${locationType || 'Location'}: ${dateAddress || dateLocation || 'N/A'}`;
+    // Formatear ubicación con número de unidad si existe
+    const addressWithUnit = unitNumber ? `${dateAddress || dateLocation || 'N/A'} - Unit: ${unitNumber}` : (dateAddress || dateLocation || 'N/A');
+    const location = `${locationType || 'Location'}: ${addressWithUnit}`;
 
     setSendingiMessage(true);
 
@@ -1457,14 +1459,14 @@ Please respond immediately.`;
       return;
     }
 
-    const { userName, userNickname, userPhotoUrl, dateName, datePhone, datePhotoUrl, dateLocation, locationType, dateAddress, currentLocation, emergencyContactName, lastCheckIn } = selectedAlert;
+    const { userName, userNickname, userPhotoUrl, dateName, datePhone, datePhotoUrl, dateLocation, locationType, dateAddress, unitNumber, currentLocation, emergencyContactName, lastCheckIn } = selectedAlert;
     const displayName = userNickname || userName;
 
     // Limpiar el número de teléfono ingresado
     const cleanPhone = suspectWarningPhone.replace(/[^\d+]/g, '');
 
-    // Formatear ubicación de la cita
-    const meetingLocation = dateAddress || dateLocation || 'N/A';
+    // Formatear ubicación de la cita con número de unidad si existe
+    const meetingLocation = unitNumber ? `${dateAddress || dateLocation || 'N/A'} - Unit: ${unitNumber}` : (dateAddress || dateLocation || 'N/A');
 
     setSendingSuspectWarning(true);
 
@@ -2492,7 +2494,7 @@ Please respond immediately.`;
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
                         </svg>
                         <span className="truncate">
-                          {alert.locationType || 'Location'}: {alert.dateAddress || alert.dateLocation}
+                          {alert.locationType || 'Location'}: {alert.dateAddress || alert.dateLocation}{alert.unitNumber ? ` - Unit: ${alert.unitNumber}` : ''}
                         </span>
                         {alert.currentLocation && (alert.currentLocation.latitude !== 0 || alert.currentLocation.longitude !== 0) && (
                           <span title="GPS Available">
@@ -2574,7 +2576,7 @@ Please respond immediately.`;
                       <p className="text-xs text-orange-600 font-medium uppercase">Date With</p>
                       <p className="font-semibold text-gray-900 truncate">{selectedAlert.dateName}</p>
                       <p className="text-sm text-gray-500">{selectedAlert.datePhone}</p>
-                      <p className="text-xs text-gray-400 truncate">@ {selectedAlert.locationType}: {selectedAlert.dateAddress || selectedAlert.dateLocation}</p>
+                      <p className="text-xs text-gray-400 truncate">@ {selectedAlert.locationType}: {selectedAlert.dateAddress || selectedAlert.dateLocation}{selectedAlert.unitNumber ? ` - Unit: ${selectedAlert.unitNumber}` : ''}</p>
                     </div>
                   </div>
                 </div>
@@ -3323,7 +3325,7 @@ Please respond immediately.`;
               </div>
               <div className="text-right">
                 <p className="text-xs text-gray-500">Location</p>
-                <p className="font-medium text-gray-700 text-sm">{selectedAlert.dateAddress || selectedAlert.dateLocation}</p>
+                <p className="font-medium text-gray-700 text-sm">{selectedAlert.dateAddress || selectedAlert.dateLocation}{selectedAlert.unitNumber ? ` - Unit: ${selectedAlert.unitNumber}` : ''}</p>
               </div>
             </div>
 
