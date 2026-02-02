@@ -68,6 +68,12 @@ const Header: React.FC = () => {
             >
               Download App
             </a>
+            <Link
+              href="/get-premium"
+              className="bg-white hover:bg-gray-100 text-[#6A1B9A] px-5 py-2.5 rounded-lg font-semibold transition-all duration-200 hover:scale-105"
+            >
+              Get Premium Access
+            </Link>
           </nav>
 
           {/* Mobile Menu Button */}
@@ -101,6 +107,12 @@ const Header: React.FC = () => {
               >
                 Download App
               </a>
+              <Link
+                href="/get-premium"
+                className="bg-white hover:bg-gray-100 text-[#6A1B9A] px-5 py-2.5 rounded-lg font-semibold text-center transition-all duration-200"
+              >
+                Get Premium Access
+              </Link>
             </nav>
           </div>
         )}
