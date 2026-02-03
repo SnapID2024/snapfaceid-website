@@ -402,6 +402,9 @@ export default function AdminDashboard() {
   // Estado para contador de complaints pendientes
   const [pendingComplaintsCount, setPendingComplaintsCount] = useState(0);
 
+  // Estado para contador de mail inbox sin leer
+  const [unreadModerationCount, setUnreadModerationCount] = useState(0);
+
   // === LIVE TRACKING ===
   const [showLiveTracking, setShowLiveTracking] = useState(false);
   const [liveTrackingSessionId, setLiveTrackingSessionId] = useState<string | null>(null);
@@ -815,6 +818,34 @@ export default function AdminDashboard() {
     fetchComplaintsCount();
     // Refresh every 30 seconds
     const interval = setInterval(fetchComplaintsCount, 30000);
+    return () => clearInterval(interval);
+  }, []);
+
+  // Fetch unread moderation count for Mail Inbox badge
+  useEffect(() => {
+    const fetchUnreadModerationCount = async () => {
+      const token = localStorage.getItem('adminToken');
+      if (!token) return;
+
+      try {
+        const response = await fetch('/api/admin/moderation/unread-count', {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+          },
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          setUnreadModerationCount(data.unread_count || 0);
+        }
+      } catch (err) {
+        console.error('Error fetching moderation count:', err);
+      }
+    };
+
+    fetchUnreadModerationCount();
+    // Refresh every 30 seconds
+    const interval = setInterval(fetchUnreadModerationCount, 30000);
     return () => clearInterval(interval);
   }, []);
 
@@ -1690,12 +1721,31 @@ Please respond immediately.`;
                 </span>
               )}
             </a>
+            {/* Mail Inbox Tab - Review moderation queue */}
+            <a
+              href="/admin/mail-inbox"
+              className="relative px-2 py-1 rounded-md font-medium text-xs whitespace-nowrap transition-all bg-pink-100 text-pink-700 hover:bg-pink-200"
+            >
+              Mail Inbox
+              {unreadModerationCount > 0 && (
+                <span className="absolute -top-2 -right-2 bg-pink-500 text-white text-[10px] font-bold rounded-full h-5 w-5 flex items-center justify-center shadow-sm">
+                  {unreadModerationCount > 99 ? '99+' : unreadModerationCount}
+                </span>
+              )}
+            </a>
             {/* Frontend Logs Tab - Debug logs from mobile app */}
             <a
               href="/admin/frontend-logs"
               className="px-2 py-1 rounded-md font-medium text-xs whitespace-nowrap transition-all bg-orange-100 text-orange-700 hover:bg-orange-200"
             >
               App Logs
+            </a>
+            {/* Promo Codes Tab - Promotional codes for influencers */}
+            <a
+              href="/admin/promo-codes"
+              className="px-2 py-1 rounded-md font-medium text-xs whitespace-nowrap transition-all bg-green-100 text-green-700 hover:bg-green-200"
+            >
+              Promo Codes
             </a>
           </div>
         </div>
