@@ -350,7 +350,20 @@ PRIVACY:
 For questions about the sweepstakes: bellacruzcompany@gmail.com`,
   },
   {
-    title: '17. Contact',
+    title: '17. Operational Communications',
+    body: `By providing your phone number and registering for our service, you consent to receive operational and informational communications from BELLACRUZ ONLINE LLC, including but not limited to:
+
+• Account verification codes
+• Security alerts and notifications
+• Guardian safety alerts and emergency communications
+• Service updates and important notices
+
+Message frequency varies. Message and data rates may apply.
+
+Reply STOP to opt-out of non-essential messages. Note: You cannot opt-out of Guardian emergency alerts during active sessions, as these are critical safety communications.`,
+  },
+  {
+    title: '18. Contact',
     body: `For questions, cancellations, or requests:
 
 BELLACRUZ ONLINE LLC

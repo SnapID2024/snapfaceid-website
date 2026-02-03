@@ -1681,42 +1681,44 @@ Please respond immediately.`;
             >
               Push
             </button>
+            {/* Separator before external links */}
+            <div className="w-px h-6 bg-gray-300 mx-1" />
             {/* Problemas/Users Tab - Link to separate page */}
             <a
               href="/admin/users-problems"
-              className="px-2 py-1 rounded-md font-medium text-xs whitespace-nowrap transition-all bg-gray-100 text-gray-600 hover:bg-gray-200"
+              className="px-3 py-1.5 rounded-lg font-medium text-xs whitespace-nowrap transition-all bg-[#6A1B9A]/10 text-[#6A1B9A] hover:bg-[#6A1B9A]/20 border border-[#6A1B9A]/20"
             >
               Users
             </a>
             {/* Verification Tab - Link to verification logs */}
             <a
               href="/admin/verification"
-              className="px-2 py-1 rounded-md font-medium text-xs whitespace-nowrap transition-all bg-gray-100 text-gray-600 hover:bg-gray-200"
+              className="px-3 py-1.5 rounded-lg font-medium text-xs whitespace-nowrap transition-all bg-[#6A1B9A]/10 text-[#6A1B9A] hover:bg-[#6A1B9A]/20 border border-[#6A1B9A]/20"
             >
               Verify
             </a>
             {/* Trusted Validation Tab - Link to trusted validation logs */}
             <a
               href="/admin/trusted-validation"
-              className="px-2 py-1 rounded-md font-medium text-xs whitespace-nowrap transition-all bg-gray-100 text-gray-600 hover:bg-gray-200"
+              className="px-3 py-1.5 rounded-lg font-medium text-xs whitespace-nowrap transition-all bg-[#6A1B9A]/10 text-[#6A1B9A] hover:bg-[#6A1B9A]/20 border border-[#6A1B9A]/20"
             >
               Trusted
             </a>
             {/* Geofence Tab - Link to geofence management */}
             <a
               href="/admin/geofence"
-              className="px-2 py-1 rounded-md font-medium text-xs whitespace-nowrap transition-all bg-purple-100 text-purple-700 hover:bg-purple-200"
+              className="px-3 py-1.5 rounded-lg font-medium text-xs whitespace-nowrap transition-all bg-[#6A1B9A]/10 text-[#6A1B9A] hover:bg-[#6A1B9A]/20 border border-[#6A1B9A]/20"
             >
               Geofence
             </a>
             {/* Complaints Tab - Link to complaints management */}
             <a
               href="/admin/complaints"
-              className="relative px-2 py-1 rounded-md font-medium text-xs whitespace-nowrap transition-all bg-gray-100 text-gray-600 hover:bg-gray-200"
+              className="relative px-3 py-1.5 rounded-lg font-medium text-xs whitespace-nowrap transition-all bg-[#6A1B9A]/10 text-[#6A1B9A] hover:bg-[#6A1B9A]/20 border border-[#6A1B9A]/20"
             >
               Complaints
               {pendingComplaintsCount > 0 && (
-                <span className="absolute -top-2 -right-2 bg-yellow-400 text-yellow-900 text-[10px] font-bold rounded-full h-5 w-5 flex items-center justify-center shadow-sm">
+                <span className="absolute -top-2 -right-2 bg-[#6A1B9A] text-white text-[10px] font-bold rounded-full h-5 w-5 flex items-center justify-center shadow-sm">
                   {pendingComplaintsCount > 99 ? '99+' : pendingComplaintsCount}
                 </span>
               )}
@@ -1724,11 +1726,11 @@ Please respond immediately.`;
             {/* Mail Inbox Tab - Review moderation queue */}
             <a
               href="/admin/mail-inbox"
-              className="relative px-2 py-1 rounded-md font-medium text-xs whitespace-nowrap transition-all bg-pink-100 text-pink-700 hover:bg-pink-200"
+              className="relative px-3 py-1.5 rounded-lg font-medium text-xs whitespace-nowrap transition-all bg-[#6A1B9A]/10 text-[#6A1B9A] hover:bg-[#6A1B9A]/20 border border-[#6A1B9A]/20"
             >
               Mail Inbox
               {unreadModerationCount > 0 && (
-                <span className="absolute -top-2 -right-2 bg-pink-500 text-white text-[10px] font-bold rounded-full h-5 w-5 flex items-center justify-center shadow-sm">
+                <span className="absolute -top-2 -right-2 bg-[#6A1B9A] text-white text-[10px] font-bold rounded-full h-5 w-5 flex items-center justify-center shadow-sm">
                   {unreadModerationCount > 99 ? '99+' : unreadModerationCount}
                 </span>
               )}
@@ -1736,14 +1738,14 @@ Please respond immediately.`;
             {/* Frontend Logs Tab - Debug logs from mobile app */}
             <a
               href="/admin/frontend-logs"
-              className="px-2 py-1 rounded-md font-medium text-xs whitespace-nowrap transition-all bg-orange-100 text-orange-700 hover:bg-orange-200"
+              className="px-3 py-1.5 rounded-lg font-medium text-xs whitespace-nowrap transition-all bg-[#6A1B9A]/10 text-[#6A1B9A] hover:bg-[#6A1B9A]/20 border border-[#6A1B9A]/20"
             >
               App Logs
             </a>
             {/* Promo Codes Tab - Promotional codes for influencers */}
             <a
               href="/admin/promo-codes"
-              className="px-2 py-1 rounded-md font-medium text-xs whitespace-nowrap transition-all bg-green-100 text-green-700 hover:bg-green-200"
+              className="px-3 py-1.5 rounded-lg font-medium text-xs whitespace-nowrap transition-all bg-[#6A1B9A]/10 text-[#6A1B9A] hover:bg-[#6A1B9A]/20 border border-[#6A1B9A]/20"
             >
               Promo Codes
             </a>
