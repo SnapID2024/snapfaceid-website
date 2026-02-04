@@ -24,8 +24,6 @@ interface Stats {
   revoked: number;
 }
 
-const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'https://api.snapfaceid.com';
-
 export default function PromoCodesPage() {
   const router = useRouter();
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -43,34 +41,34 @@ export default function PromoCodesPage() {
   // Filter
   const [statusFilter, setStatusFilter] = useState<string>('all');
 
-  // Get auth header
-  const getAuthHeader = useCallback(() => {
+  // Get auth token
+  const getToken = useCallback(() => {
     if (typeof window === 'undefined') return '';
-    const username = localStorage.getItem('admin_username') || '';
-    const password = localStorage.getItem('admin_password') || '';
-    return 'Basic ' + btoa(`${username}:${password}`);
+    return localStorage.getItem('adminToken') || '';
   }, []);
 
-  // Check auth
+  // Check auth - same as dashboard
   useEffect(() => {
-    const username = localStorage.getItem('admin_username');
-    const password = localStorage.getItem('admin_password');
-    if (!username || !password) {
+    const token = localStorage.getItem('adminToken');
+    if (!token) {
       router.push('/admin');
     } else {
       setIsAuthenticated(true);
     }
   }, [router]);
 
-  // Fetch codes
+  // Fetch codes via local API route
   const fetchCodes = useCallback(async () => {
+    const token = getToken();
+    if (!token) return;
+
     try {
       const url = statusFilter === 'all'
-        ? `${BACKEND_URL}/admin/promo-codes/list`
-        : `${BACKEND_URL}/admin/promo-codes/list?status=${statusFilter}`;
+        ? '/api/admin/promo-codes'
+        : `/api/admin/promo-codes?status=${statusFilter}`;
 
       const response = await fetch(url, {
-        headers: { 'Authorization': getAuthHeader() }
+        headers: { 'Authorization': `Bearer ${token}` }
       });
 
       if (!response.ok) throw new Error('Failed to fetch codes');
@@ -79,13 +77,16 @@ export default function PromoCodesPage() {
     } catch (err) {
       setError('Failed to load promo codes');
     }
-  }, [getAuthHeader, statusFilter]);
+  }, [getToken, statusFilter]);
 
-  // Fetch stats
+  // Fetch stats via local API route
   const fetchStats = useCallback(async () => {
+    const token = getToken();
+    if (!token) return;
+
     try {
-      const response = await fetch(`${BACKEND_URL}/admin/promo-codes/stats`, {
-        headers: { 'Authorization': getAuthHeader() }
+      const response = await fetch('/api/admin/promo-codes/stats', {
+        headers: { 'Authorization': `Bearer ${token}` }
       });
 
       if (!response.ok) throw new Error('Failed to fetch stats');
@@ -94,7 +95,7 @@ export default function PromoCodesPage() {
     } catch (err) {
       console.error('Failed to fetch stats:', err);
     }
-  }, [getAuthHeader]);
+  }, [getToken]);
 
   // Load data
   useEffect(() => {
@@ -122,6 +123,9 @@ export default function PromoCodesPage() {
     setError('');
     setSuccess('');
 
+    const token = getToken();
+    if (!token) return;
+
     if (!phone.trim()) {
       setError('Phone number is required');
       return;
@@ -137,11 +141,11 @@ export default function PromoCodesPage() {
     setCreating(true);
 
     try {
-      const response = await fetch(`${BACKEND_URL}/admin/promo-codes/create`, {
+      const response = await fetch('/api/admin/promo-codes', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': getAuthHeader()
+          'Authorization': `Bearer ${token}`
         },
         body: JSON.stringify({
           phone: cleanPhone,
@@ -152,7 +156,7 @@ export default function PromoCodesPage() {
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.detail || 'Failed to create promo code');
+        throw new Error(data.detail || data.error || 'Failed to create promo code');
       }
 
       setSuccess(`Promo code created: ${data.code}`);
@@ -175,15 +179,18 @@ export default function PromoCodesPage() {
       return;
     }
 
+    const token = getToken();
+    if (!token) return;
+
     try {
-      const response = await fetch(`${BACKEND_URL}/admin/promo-codes/revoke/${code}`, {
+      const response = await fetch(`/api/admin/promo-codes/revoke/${code}`, {
         method: 'POST',
-        headers: { 'Authorization': getAuthHeader() }
+        headers: { 'Authorization': `Bearer ${token}` }
       });
 
       if (!response.ok) {
         const data = await response.json();
-        throw new Error(data.detail || 'Failed to revoke code');
+        throw new Error(data.detail || data.error || 'Failed to revoke code');
       }
 
       setSuccess(`Code ${code} has been revoked`);
