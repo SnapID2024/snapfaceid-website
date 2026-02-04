@@ -89,7 +89,7 @@ interface ProblemUsersData {
   };
 }
 
-type TabType = 'emergency' | 'upgraded' | 'logout' | 'downgraded' | 'inactive';
+type TabType = 'emergency' | 'upgraded' | 'logout' | 'downgraded' | 'inactive' | 'device-reset';
 
 export default function UsersProblemsPage() {
   const router = useRouter();
@@ -98,6 +98,15 @@ export default function UsersProblemsPage() {
   const [data, setData] = useState<ProblemUsersData | null>(null);
   const [activeTab, setActiveTab] = useState<TabType>('emergency');
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
+
+  // Device Reset State
+  const [resetPhone, setResetPhone] = useState('');
+  const [resetCode, setResetCode] = useState('');
+  const [resetStep, setResetStep] = useState<'phone' | 'code' | 'success'>('phone');
+  const [resetLoading, setResetLoading] = useState(false);
+  const [resetError, setResetError] = useState<string | null>(null);
+  const [resetSuccess, setResetSuccess] = useState<string | null>(null);
+  const [resetUsername, setResetUsername] = useState('');
 
   const fetchData = useCallback(async (token: string, showLoading = true) => {
     if (showLoading) setIsLoading(true);
@@ -169,6 +178,98 @@ export default function UsersProblemsPage() {
   const truncateText = (text: string, maxLength: number) => {
     if (!text) return '—';
     return text.length > maxLength ? `${text.substring(0, maxLength)}...` : text;
+  };
+
+  // Device Reset Functions
+  const handleSendResetCode = async () => {
+    if (!resetPhone.trim()) {
+      setResetError('Please enter a phone number');
+      return;
+    }
+
+    const token = localStorage.getItem('adminToken');
+    if (!token) return;
+
+    setResetLoading(true);
+    setResetError(null);
+
+    try {
+      const response = await fetch('/api/admin/device-reset', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          action: 'send-code',
+          phone: resetPhone.trim(),
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.detail || data.error || 'Failed to send code');
+      }
+
+      setResetUsername(data.username || '');
+      setResetStep('code');
+      setResetSuccess(`Verification code sent to ${resetPhone}`);
+    } catch (err) {
+      setResetError(err instanceof Error ? err.message : 'Failed to send code');
+    } finally {
+      setResetLoading(false);
+    }
+  };
+
+  const handleVerifyResetCode = async () => {
+    if (!resetCode.trim() || resetCode.length !== 6) {
+      setResetError('Please enter the 6-digit code');
+      return;
+    }
+
+    const token = localStorage.getItem('adminToken');
+    if (!token) return;
+
+    setResetLoading(true);
+    setResetError(null);
+
+    try {
+      const response = await fetch('/api/admin/device-reset', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          action: 'verify',
+          phone: resetPhone.trim(),
+          code: resetCode.trim(),
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.detail || data.error || 'Failed to verify code');
+      }
+
+      setResetStep('success');
+      setResetSuccess(data.message);
+    } catch (err) {
+      setResetError(err instanceof Error ? err.message : 'Failed to verify code');
+    } finally {
+      setResetLoading(false);
+    }
+  };
+
+  const handleResetForm = () => {
+    setResetPhone('');
+    setResetCode('');
+    setResetStep('phone');
+    setResetError(null);
+    setResetSuccess(null);
+    setResetUsername('');
   };
 
   return (
@@ -246,6 +347,7 @@ export default function UsersProblemsPage() {
             { id: 'logout', label: 'Logouts', count: data?.stats.totalLogouts },
             { id: 'downgraded', label: 'Downgrades', count: data?.stats.totalDowngrades },
             { id: 'inactive', label: 'Inactive', count: data?.stats.totalInactive },
+            { id: 'device-reset', label: 'Device Reset', count: undefined },
           ].map((tab) => (
             <button
               key={tab.id}
@@ -595,6 +697,167 @@ export default function UsersProblemsPage() {
                 )}
               </tbody>
             </table>
+          </div>
+        )}
+
+        {/* Device Reset Tab */}
+        {activeTab === 'device-reset' && (
+          <div className="bg-gray-800 rounded-xl p-6">
+            <div className="max-w-md mx-auto">
+              <div className="text-center mb-6">
+                <div className="w-16 h-16 bg-purple-600/20 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <svg className="w-8 h-8 text-purple-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                  </svg>
+                </div>
+                <h2 className="text-xl font-bold text-white mb-2">Device Reset</h2>
+                <p className="text-gray-400 text-sm">
+                  Help users who lost their phone regain access to their account by resetting their device ID.
+                </p>
+              </div>
+
+              {/* Error Message */}
+              {resetError && (
+                <div className="mb-4 p-3 bg-red-900/30 border border-red-700 rounded-lg text-red-400 text-sm">
+                  {resetError}
+                </div>
+              )}
+
+              {/* Success Message */}
+              {resetSuccess && resetStep !== 'success' && (
+                <div className="mb-4 p-3 bg-green-900/30 border border-green-700 rounded-lg text-green-400 text-sm">
+                  {resetSuccess}
+                </div>
+              )}
+
+              {/* Step 1: Enter Phone */}
+              {resetStep === 'phone' && (
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-300 mb-2">
+                      User Phone Number
+                    </label>
+                    <input
+                      type="text"
+                      value={resetPhone}
+                      onChange={(e) => setResetPhone(e.target.value)}
+                      placeholder="+1234567890"
+                      className="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                    />
+                    <p className="mt-1 text-xs text-gray-500">Enter the phone number in E.164 format (with + prefix)</p>
+                  </div>
+                  <button
+                    onClick={handleSendResetCode}
+                    disabled={resetLoading}
+                    className="w-full py-3 bg-purple-600 hover:bg-purple-700 text-white font-semibold rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                  >
+                    {resetLoading ? (
+                      <>
+                        <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                        Sending...
+                      </>
+                    ) : (
+                      <>
+                        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                        </svg>
+                        Send Verification Code
+                      </>
+                    )}
+                  </button>
+                </div>
+              )}
+
+              {/* Step 2: Enter Code */}
+              {resetStep === 'code' && (
+                <div className="space-y-4">
+                  <div className="p-3 bg-gray-700/50 rounded-lg mb-4">
+                    <p className="text-sm text-gray-300">
+                      Code sent to: <span className="font-mono text-white">{resetPhone}</span>
+                    </p>
+                    {resetUsername && (
+                      <p className="text-sm text-gray-400 mt-1">
+                        User: <span className="text-white">{resetUsername}</span>
+                      </p>
+                    )}
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-300 mb-2">
+                      Verification Code
+                    </label>
+                    <input
+                      type="text"
+                      value={resetCode}
+                      onChange={(e) => setResetCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                      placeholder="Enter 6-digit code"
+                      maxLength={6}
+                      className="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white text-center text-2xl font-mono tracking-widest placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                    />
+                    <p className="mt-1 text-xs text-gray-500">Ask the user to provide the code they received via SMS</p>
+                  </div>
+                  <div className="flex gap-3">
+                    <button
+                      onClick={handleResetForm}
+                      className="flex-1 py-3 bg-gray-700 hover:bg-gray-600 text-white font-semibold rounded-lg transition-colors"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      onClick={handleVerifyResetCode}
+                      disabled={resetLoading || resetCode.length !== 6}
+                      className="flex-1 py-3 bg-purple-600 hover:bg-purple-700 text-white font-semibold rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                    >
+                      {resetLoading ? (
+                        <>
+                          <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                          Verifying...
+                        </>
+                      ) : (
+                        <>
+                          <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                          </svg>
+                          Verify & Reset
+                        </>
+                      )}
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Step 3: Success */}
+              {resetStep === 'success' && (
+                <div className="text-center space-y-4">
+                  <div className="w-16 h-16 bg-green-600/20 rounded-full flex items-center justify-center mx-auto">
+                    <svg className="w-8 h-8 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                    </svg>
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-bold text-white mb-2">Device Reset Successful</h3>
+                    <div className="p-4 bg-gray-700/50 rounded-lg text-left">
+                      <p className="text-sm text-gray-300 mb-2">
+                        <span className="font-semibold text-white">User:</span> {resetUsername}
+                      </p>
+                      <p className="text-sm text-gray-300 mb-3">
+                        <span className="font-semibold text-white">Phone:</span> {resetPhone}
+                      </p>
+                      <div className="p-3 bg-purple-900/30 border border-purple-700 rounded-lg">
+                        <p className="text-sm text-purple-200">
+                          <span className="font-semibold">Tell the user:</span> &quot;Please log in with your username and password to register your new device.&quot;
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                  <button
+                    onClick={handleResetForm}
+                    className="w-full py-3 bg-purple-600 hover:bg-purple-700 text-white font-semibold rounded-lg transition-colors"
+                  >
+                    Reset Another Device
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
         )}
       </div>
