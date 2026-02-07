@@ -62,11 +62,11 @@ interface ModerationItem {
   review_preset_1: number | null;
   review_preset_2: number | null;
   knows_in_person: boolean;
-  pending_selfie_url: string;
+  pending_selfie_url: string | null;
   profile_selfie_url: string | null;
-  approve_token: string;
-  reject_token: string;
-  status: 'unread' | 'read' | 'approved' | 'rejected';
+  approve_token: string | null;
+  reject_token: string | null;
+  status: 'unread' | 'read' | 'approved' | 'rejected' | 'auto_approved';
   created_at: string;
   moderated_at: string | null;
   moderated_via: string | null;
@@ -74,6 +74,7 @@ interface ModerationItem {
   is_cross_profile_match?: boolean;
   original_person_id?: string | null;
   original_phone_number?: string | null;
+  merge_id?: string | null;
 }
 
 type FilterStatus = 'all' | 'pending' | 'approved' | 'rejected';
@@ -157,12 +158,14 @@ export default function MailInboxPage() {
       read: 'bg-blue-500/20 text-blue-400 border-blue-500/30',
       approved: 'bg-green-500/20 text-green-400 border-green-500/30',
       rejected: 'bg-red-500/20 text-red-400 border-red-500/30',
+      auto_approved: 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30',
     };
     const labels: Record<string, string> = {
       unread: 'Unread',
       read: 'Read',
       approved: 'Approved',
       rejected: 'Rejected',
+      auto_approved: 'Auto-Approved',
     };
     return (
       <span className={`px-2 py-0.5 text-xs font-medium rounded-full border ${styles[status] || 'bg-gray-500/20 text-gray-400'}`}>
@@ -638,13 +641,17 @@ export default function MailInboxPage() {
                   )}
 
                   {/* Already Processed */}
-                  {(selectedItem.status === 'approved' || selectedItem.status === 'rejected') && (
+                  {(selectedItem.status === 'approved' || selectedItem.status === 'rejected' || selectedItem.status === 'auto_approved') && (
                     <div className={`text-center py-3 rounded-lg ${
                       selectedItem.status === 'approved'
                         ? 'bg-green-500/20 text-green-400'
+                        : selectedItem.status === 'auto_approved'
+                        ? 'bg-emerald-500/20 text-emerald-400'
                         : 'bg-red-500/20 text-red-400'
                     }`}>
-                      This review has been {selectedItem.status}
+                      {selectedItem.status === 'auto_approved'
+                        ? 'This cross-profile link was auto-approved (photo verified by Luxand)'
+                        : `This review has been ${selectedItem.status}`}
                     </div>
                   )}
                 </div>

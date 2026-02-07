@@ -120,6 +120,14 @@ interface AdvertiserMessage {
 
 type FilterType = 'all' | 'active' | 'no_response' | 'emergency' | 'panic' | 'safe';
 
+// Platform stats interface
+interface PlatformStats {
+  registered_users: number;
+  total_reviews: number;
+  reviews_with_photos: number;
+  remote_reviews: number;
+}
+
 // Función para obtener el color y texto del estado
 const getStatusDisplay = (status: Alert['status']) => {
   switch (status) {
@@ -404,6 +412,9 @@ export default function AdminDashboard() {
 
   // Estado para contador de mail inbox sin leer
   const [unreadModerationCount, setUnreadModerationCount] = useState(0);
+
+  // Platform stats for header display
+  const [platformStats, setPlatformStats] = useState<PlatformStats | null>(null);
 
   // === LIVE TRACKING ===
   const [showLiveTracking, setShowLiveTracking] = useState(false);
@@ -846,6 +857,25 @@ export default function AdminDashboard() {
     fetchUnreadModerationCount();
     // Refresh every 30 seconds
     const interval = setInterval(fetchUnreadModerationCount, 30000);
+    return () => clearInterval(interval);
+  }, []);
+
+  // Fetch platform stats for header display
+  useEffect(() => {
+    const fetchPlatformStats = async () => {
+      try {
+        const response = await fetch('/api/stats');
+        if (response.ok) {
+          const data = await response.json();
+          setPlatformStats(data);
+        }
+      } catch (error) {
+        console.error('Error fetching platform stats:', error);
+      }
+    };
+    fetchPlatformStats();
+    // Refresh every 5 minutes
+    const interval = setInterval(fetchPlatformStats, 5 * 60 * 1000);
     return () => clearInterval(interval);
   }, []);
 
@@ -1598,6 +1628,28 @@ Please respond immediately.`;
                 <span className="hidden sm:inline text-white/70 ml-2">Admin Dashboard</span>
               </div>
             </div>
+
+            {/* Platform Stats */}
+            {platformStats && (
+              <div className="hidden md:flex items-center gap-3 text-[#FF5722]">
+                <div className="flex items-center gap-1.5 bg-white/10 px-2.5 py-1 rounded-lg">
+                  <span className="font-bold text-sm">{platformStats.registered_users.toLocaleString()}</span>
+                  <span className="text-white/60 text-xs">Users</span>
+                </div>
+                <div className="flex items-center gap-1.5 bg-white/10 px-2.5 py-1 rounded-lg">
+                  <span className="font-bold text-sm">{platformStats.total_reviews.toLocaleString()}</span>
+                  <span className="text-white/60 text-xs">Reviews</span>
+                </div>
+                <div className="flex items-center gap-1.5 bg-white/10 px-2.5 py-1 rounded-lg">
+                  <span className="font-bold text-sm">{platformStats.reviews_with_photos.toLocaleString()}</span>
+                  <span className="text-white/60 text-xs">Photos</span>
+                </div>
+                <div className="flex items-center gap-1.5 bg-white/10 px-2.5 py-1 rounded-lg">
+                  <span className="font-bold text-sm">{platformStats.remote_reviews.toLocaleString()}</span>
+                  <span className="text-white/60 text-xs">Remote</span>
+                </div>
+              </div>
+            )}
 
             <div className="flex items-center gap-4">
               <div className="flex items-center gap-2 bg-white/10 px-3 py-1.5 rounded-lg">
