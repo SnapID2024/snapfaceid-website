@@ -90,58 +90,131 @@ export default function MailInboxPage() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
   const [prevUnreadCount, setPrevUnreadCount] = useState(0);
-  const [audioEnabled, setAudioEnabled] = useState(false);
-  const audioContextRef = useRef<AudioContext | null>(null);
+  const audioUnlockedRef = useRef(false);
+  const audioElementRef = useRef<HTMLAudioElement | null>(null);
 
-  // Initialize audio on first user interaction (required by browser autoplay policy)
+  // Create and play notification sound
+  const playNotificationSound = useCallback(() => {
+    if (!audioUnlockedRef.current) {
+      console.log('Audio not yet unlocked (waiting for user interaction)');
+      return;
+    }
+
+    try {
+      // Create a fresh audio element each time for reliability
+      const audio = audioElementRef.current;
+      if (audio) {
+        audio.currentTime = 0;
+        audio.play().then(() => {
+          console.log('🔔 Notification sound played successfully');
+        }).catch(err => {
+          console.error('Failed to play:', err);
+        });
+      }
+    } catch (err) {
+      console.error('Error in playNotificationSound:', err);
+    }
+  }, []);
+
+  // Initialize audio system - unlocks on first user interaction
   useEffect(() => {
-    const enableAudio = () => {
-      if (audioContextRef.current) return; // Already initialized
+    // Create the audio element with a data URI of a notification sound
+    // Two-tone chime: 880Hz then 1100Hz
+    const createAudioElement = () => {
+      const audioContext = new (window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext)();
+      const sampleRate = audioContext.sampleRate;
+      const duration = 0.6;
+      const buffer = audioContext.createBuffer(1, sampleRate * duration, sampleRate);
+      const data = buffer.getChannelData(0);
 
-      try {
-        const AudioContextClass = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
-        audioContextRef.current = new AudioContextClass();
+      for (let i = 0; i < buffer.length; i++) {
+        const t = i / sampleRate;
+        let sample = 0;
+        // First beep: 880Hz, 0-0.2s
+        if (t < 0.2) {
+          sample = Math.sin(2 * Math.PI * 880 * t) * Math.exp(-t * 5) * 0.6;
+        }
+        // Second beep: 1100Hz, 0.25-0.45s
+        else if (t >= 0.25 && t < 0.45) {
+          const t2 = t - 0.25;
+          sample = Math.sin(2 * Math.PI * 1100 * t2) * Math.exp(-t2 * 5) * 0.6;
+        }
+        data[i] = sample;
+      }
 
-        // Create a function to play notification sound
-        const playBeep = () => {
-          if (!audioContextRef.current) return;
+      // Convert to WAV
+      const numChannels = 1;
+      const bitDepth = 16;
+      const bytesPerSample = bitDepth / 8;
+      const blockAlign = numChannels * bytesPerSample;
+      const samples = data.length;
+      const dataSize = samples * blockAlign;
+      const arrayBuffer = new ArrayBuffer(44 + dataSize);
+      const view = new DataView(arrayBuffer);
 
-          // Resume context if suspended (browser policy)
-          if (audioContextRef.current.state === 'suspended') {
-            audioContextRef.current.resume();
-          }
+      // WAV header
+      const writeStr = (o: number, s: string) => { for (let i = 0; i < s.length; i++) view.setUint8(o + i, s.charCodeAt(i)); };
+      writeStr(0, 'RIFF');
+      view.setUint32(4, 36 + dataSize, true);
+      writeStr(8, 'WAVE');
+      writeStr(12, 'fmt ');
+      view.setUint32(16, 16, true);
+      view.setUint16(20, 1, true);
+      view.setUint16(22, numChannels, true);
+      view.setUint32(24, sampleRate, true);
+      view.setUint32(28, sampleRate * blockAlign, true);
+      view.setUint16(32, blockAlign, true);
+      view.setUint16(34, bitDepth, true);
+      writeStr(36, 'data');
+      view.setUint32(40, dataSize, true);
 
-          const oscillator = audioContextRef.current.createOscillator();
-          const gainNode = audioContextRef.current.createGain();
+      let offset = 44;
+      for (let i = 0; i < samples; i++) {
+        const s = Math.max(-1, Math.min(1, data[i]));
+        view.setInt16(offset, s < 0 ? s * 0x8000 : s * 0x7FFF, true);
+        offset += 2;
+      }
 
-          oscillator.connect(gainNode);
-          gainNode.connect(audioContextRef.current.destination);
+      audioContext.close();
+      return URL.createObjectURL(new Blob([arrayBuffer], { type: 'audio/wav' }));
+    };
 
-          oscillator.frequency.value = 880; // Higher frequency for more audible beep
-          oscillator.type = 'sine';
+    try {
+      const soundUrl = createAudioElement();
+      const audio = new Audio(soundUrl);
+      audio.volume = 0.8;
+      audioElementRef.current = audio;
+    } catch (err) {
+      console.error('Failed to create audio element:', err);
+    }
 
-          gainNode.gain.setValueAtTime(0.5, audioContextRef.current.currentTime);
-          gainNode.gain.exponentialRampToValueAtTime(0.01, audioContextRef.current.currentTime + 0.3);
+    // Unlock audio on ANY user interaction (click, key, touch)
+    const unlockAudio = () => {
+      if (audioUnlockedRef.current) return;
 
-          oscillator.start(audioContextRef.current.currentTime);
-          oscillator.stop(audioContextRef.current.currentTime + 0.3);
-        };
+      audioUnlockedRef.current = true;
+      console.log('🔓 Audio unlocked - notifications will now play');
 
-        // Store the function globally
-        (window as unknown as { playNotificationSound: () => void }).playNotificationSound = playBeep;
-        setAudioEnabled(true);
-        console.log('Audio notifications enabled');
-      } catch (e) {
-        console.error('Failed to initialize audio:', e);
+      // Play a silent sound to fully unlock audio on iOS/Safari
+      if (audioElementRef.current) {
+        audioElementRef.current.volume = 0;
+        audioElementRef.current.play().then(() => {
+          audioElementRef.current!.pause();
+          audioElementRef.current!.currentTime = 0;
+          audioElementRef.current!.volume = 0.8;
+        }).catch(() => {});
       }
     };
 
-    // Enable audio on any user interaction
-    const events = ['click', 'touchstart', 'keydown'];
-    events.forEach(event => document.addEventListener(event, enableAudio, { once: true }));
+    // Listen for user interactions
+    document.addEventListener('click', unlockAudio);
+    document.addEventListener('keydown', unlockAudio);
+    document.addEventListener('touchstart', unlockAudio);
 
     return () => {
-      events.forEach(event => document.removeEventListener(event, enableAudio));
+      document.removeEventListener('click', unlockAudio);
+      document.removeEventListener('keydown', unlockAudio);
+      document.removeEventListener('touchstart', unlockAudio);
     };
   }, []);
 
@@ -197,44 +270,37 @@ export default function MailInboxPage() {
 
   // Play notification sound when new unread items arrive
   useEffect(() => {
-    if (!audioEnabled) return;
-
-    const playSound = (window as unknown as { playNotificationSound?: () => void }).playNotificationSound;
-
-    // Play sound if unread count increased (new items)
-    if (unreadCount > prevUnreadCount && prevUnreadCount !== 0) {
-      if (playSound) {
-        console.log('Playing notification sound for new items');
-        playSound();
-        // Play twice for new items
-        setTimeout(() => playSound(), 400);
-      }
+    // Only play if count increased (new items arrived)
+    if (unreadCount > prevUnreadCount && prevUnreadCount >= 0) {
+      console.log(`📬 New items detected: ${prevUnreadCount} -> ${unreadCount}`);
+      playNotificationSound();
+      // Play again for emphasis
+      setTimeout(() => playNotificationSound(), 700);
     }
 
     setPrevUnreadCount(unreadCount);
-  }, [unreadCount, prevUnreadCount, audioEnabled]);
+  }, [unreadCount, prevUnreadCount, playNotificationSound]);
 
-  // Periodic reminder sound every 60 seconds while there are unread items
+  // Periodic reminder sound every 45 seconds while there are unread items
   useEffect(() => {
-    if (unreadCount === 0 || !audioEnabled) return;
+    if (unreadCount === 0) return;
 
-    const playSound = (window as unknown as { playNotificationSound?: () => void }).playNotificationSound;
+    // Play immediately when there are unread items
+    const timeoutId = setTimeout(() => {
+      playNotificationSound();
+    }, 2000); // Small delay to ensure audio is unlocked
 
-    // Play initial sound when there are unread items
-    if (playSound) {
-      console.log('Playing initial notification sound');
-      playSound();
-    }
-
+    // Then play every 45 seconds
     const interval = setInterval(() => {
-      if (playSound && unreadCount > 0) {
-        console.log('Playing periodic reminder sound');
-        playSound();
-      }
-    }, 60000); // Every 60 seconds
+      console.log('⏰ Periodic reminder - unread items:', unreadCount);
+      playNotificationSound();
+    }, 45000);
 
-    return () => clearInterval(interval);
-  }, [unreadCount, audioEnabled]);
+    return () => {
+      clearTimeout(timeoutId);
+      clearInterval(interval);
+    };
+  }, [unreadCount, playNotificationSound]);
 
   // Update page title with unread count
   useEffect(() => {
