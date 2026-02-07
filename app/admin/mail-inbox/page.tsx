@@ -90,36 +90,59 @@ export default function MailInboxPage() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
   const [prevUnreadCount, setPrevUnreadCount] = useState(0);
-  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const [audioEnabled, setAudioEnabled] = useState(false);
+  const audioContextRef = useRef<AudioContext | null>(null);
 
-  // Initialize audio element for notification sound
+  // Initialize audio on first user interaction (required by browser autoplay policy)
   useEffect(() => {
-    // Create audio element with a simple notification sound
-    // Using a data URL for a short beep sound (no external dependency)
-    const audioContext = typeof window !== 'undefined' ? new (window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext)() : null;
+    const enableAudio = () => {
+      if (audioContextRef.current) return; // Already initialized
 
-    if (audioContext) {
-      // Create a simple beep sound programmatically
-      const playBeep = () => {
-        const oscillator = audioContext.createOscillator();
-        const gainNode = audioContext.createGain();
+      try {
+        const AudioContextClass = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+        audioContextRef.current = new AudioContextClass();
 
-        oscillator.connect(gainNode);
-        gainNode.connect(audioContext.destination);
+        // Create a function to play notification sound
+        const playBeep = () => {
+          if (!audioContextRef.current) return;
 
-        oscillator.frequency.value = 800; // Frequency in Hz
-        oscillator.type = 'sine';
+          // Resume context if suspended (browser policy)
+          if (audioContextRef.current.state === 'suspended') {
+            audioContextRef.current.resume();
+          }
 
-        gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
-        gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.3);
+          const oscillator = audioContextRef.current.createOscillator();
+          const gainNode = audioContextRef.current.createGain();
 
-        oscillator.start(audioContext.currentTime);
-        oscillator.stop(audioContext.currentTime + 0.3);
-      };
+          oscillator.connect(gainNode);
+          gainNode.connect(audioContextRef.current.destination);
 
-      // Store the function for later use
-      (window as unknown as { playNotificationSound: () => void }).playNotificationSound = playBeep;
-    }
+          oscillator.frequency.value = 880; // Higher frequency for more audible beep
+          oscillator.type = 'sine';
+
+          gainNode.gain.setValueAtTime(0.5, audioContextRef.current.currentTime);
+          gainNode.gain.exponentialRampToValueAtTime(0.01, audioContextRef.current.currentTime + 0.3);
+
+          oscillator.start(audioContextRef.current.currentTime);
+          oscillator.stop(audioContextRef.current.currentTime + 0.3);
+        };
+
+        // Store the function globally
+        (window as unknown as { playNotificationSound: () => void }).playNotificationSound = playBeep;
+        setAudioEnabled(true);
+        console.log('Audio notifications enabled');
+      } catch (e) {
+        console.error('Failed to initialize audio:', e);
+      }
+    };
+
+    // Enable audio on any user interaction
+    const events = ['click', 'touchstart', 'keydown'];
+    events.forEach(event => document.addEventListener(event, enableAudio, { once: true }));
+
+    return () => {
+      events.forEach(event => document.removeEventListener(event, enableAudio));
+    };
   }, []);
 
   const fetchItems = useCallback(async (token: string, showLoading = true) => {
@@ -174,11 +197,14 @@ export default function MailInboxPage() {
 
   // Play notification sound when new unread items arrive
   useEffect(() => {
+    if (!audioEnabled) return;
+
     const playSound = (window as unknown as { playNotificationSound?: () => void }).playNotificationSound;
 
     // Play sound if unread count increased (new items)
     if (unreadCount > prevUnreadCount && prevUnreadCount !== 0) {
       if (playSound) {
+        console.log('Playing notification sound for new items');
         playSound();
         // Play twice for new items
         setTimeout(() => playSound(), 400);
@@ -186,22 +212,29 @@ export default function MailInboxPage() {
     }
 
     setPrevUnreadCount(unreadCount);
-  }, [unreadCount, prevUnreadCount]);
+  }, [unreadCount, prevUnreadCount, audioEnabled]);
 
   // Periodic reminder sound every 60 seconds while there are unread items
   useEffect(() => {
-    if (unreadCount === 0) return;
+    if (unreadCount === 0 || !audioEnabled) return;
 
     const playSound = (window as unknown as { playNotificationSound?: () => void }).playNotificationSound;
 
+    // Play initial sound when there are unread items
+    if (playSound) {
+      console.log('Playing initial notification sound');
+      playSound();
+    }
+
     const interval = setInterval(() => {
       if (playSound && unreadCount > 0) {
+        console.log('Playing periodic reminder sound');
         playSound();
       }
     }, 60000); // Every 60 seconds
 
     return () => clearInterval(interval);
-  }, [unreadCount]);
+  }, [unreadCount, audioEnabled]);
 
   // Update page title with unread count
   useEffect(() => {
@@ -712,18 +745,37 @@ export default function MailInboxPage() {
                     </div>
                   )}
 
-                  {/* Already Processed */}
-                  {(selectedItem.status === 'approved' || selectedItem.status === 'rejected' || selectedItem.status === 'auto_approved') && (
+                  {/* Already Processed - but auto_approved can still be rejected */}
+                  {selectedItem.status === 'auto_approved' && (
+                    <div className="space-y-4">
+                      <div className="bg-emerald-500/20 text-emerald-400 text-center py-3 rounded-lg">
+                        This cross-profile link was auto-approved (photo verified by Luxand)
+                      </div>
+                      {/* Reject button for auto_approved - allows reverting Anexo */}
+                      <div className="bg-orange-500/10 border border-orange-500/30 rounded-lg p-4">
+                        <p className="text-orange-300 text-sm mb-3">
+                          <strong>Manual Review:</strong> If the photos don&apos;t match the same person,
+                          you can reject this to rollback the profile merge (Anexo).
+                        </p>
+                        <button
+                          onClick={() => handleAction('reject')}
+                          disabled={isProcessing}
+                          className="w-full bg-red-600 hover:bg-red-700 text-white font-semibold py-3 px-6 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          {isProcessing ? 'Processing...' : 'Reject & Rollback Merge'}
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Already Processed (approved or rejected) */}
+                  {(selectedItem.status === 'approved' || selectedItem.status === 'rejected') && (
                     <div className={`text-center py-3 rounded-lg ${
                       selectedItem.status === 'approved'
                         ? 'bg-green-500/20 text-green-400'
-                        : selectedItem.status === 'auto_approved'
-                        ? 'bg-emerald-500/20 text-emerald-400'
                         : 'bg-red-500/20 text-red-400'
                     }`}>
-                      {selectedItem.status === 'auto_approved'
-                        ? 'This cross-profile link was auto-approved (photo verified by Luxand)'
-                        : `This review has been ${selectedItem.status}`}
+                      This review has been {selectedItem.status}
                     </div>
                   )}
                 </div>
