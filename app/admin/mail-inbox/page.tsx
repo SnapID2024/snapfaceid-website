@@ -70,6 +70,10 @@ interface ModerationItem {
   created_at: string;
   moderated_at: string | null;
   moderated_via: string | null;
+  // Cross-profile match fields
+  is_cross_profile_match?: boolean;
+  original_person_id?: string | null;
+  original_phone_number?: string | null;
 }
 
 type FilterStatus = 'all' | 'pending' | 'approved' | 'rejected';
@@ -400,11 +404,16 @@ export default function MailInboxPage() {
 
                         {/* Info */}
                         <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 mb-1">
+                          <div className="flex items-center gap-2 mb-1 flex-wrap">
                             <span className="text-white font-medium truncate">
                               {item.reviewer_username || 'Unknown'}
                             </span>
                             {getStatusBadge(item.status)}
+                            {item.is_cross_profile_match && (
+                              <span className="px-2 py-0.5 text-xs font-bold rounded-full bg-orange-500/30 text-orange-400 border border-orange-500/50">
+                                Cross-Match
+                              </span>
+                            )}
                             {item.knows_in_person && (
                               <span className="px-2 py-0.5 text-xs font-medium rounded-full bg-green-500/20 text-green-400">
                                 Knows in person
@@ -414,6 +423,11 @@ export default function MailInboxPage() {
                           <p className="text-gray-400 text-sm">
                             Phone: {item.phone_number}
                           </p>
+                          {item.is_cross_profile_match && item.original_phone_number && (
+                            <p className="text-orange-400 text-xs">
+                              Original: {item.original_phone_number}
+                            </p>
+                          )}
                           <p className="text-gray-500 text-xs mt-1">
                             {formatDate(item.created_at)}
                           </p>
@@ -431,11 +445,47 @@ export default function MailInboxPage() {
                 <div className="bg-white/5 rounded-xl p-6 border border-white/10">
                   <h3 className="text-white font-semibold text-lg mb-4">Review Details</h3>
 
+                  {/* Cross-Profile Match Banner */}
+                  {selectedItem.is_cross_profile_match && (
+                    <div className="bg-orange-500/20 border-2 border-orange-500 rounded-lg p-4 mb-6">
+                      <div className="flex items-center gap-2 mb-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-orange-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                        </svg>
+                        <span className="text-orange-400 font-bold text-lg">CROSS-PROFILE MATCH DETECTED</span>
+                      </div>
+                      <p className="text-orange-200 text-sm mb-3">
+                        The user tried to add this photo to a <strong>different profile</strong>, but it matched an existing face in Luxand.
+                      </p>
+                      <div className="bg-orange-500/10 rounded p-3 space-y-2">
+                        <div className="flex justify-between text-sm">
+                          <span className="text-orange-300">Original phone (user searched):</span>
+                          <span className="text-white font-mono font-bold">{selectedItem.original_phone_number || 'N/A'}</span>
+                        </div>
+                        <div className="flex justify-between text-sm">
+                          <span className="text-orange-300">Matched profile phone:</span>
+                          <span className="text-white font-mono font-bold">{selectedItem.phone_number}</span>
+                        </div>
+                      </div>
+                      <p className="text-orange-200 text-xs mt-3 italic">
+                        Please verify that both photos show the same person before approving the profile unification.
+                      </p>
+                    </div>
+                  )}
+
                   {/* Images Comparison */}
                   <div className="grid grid-cols-2 gap-4 mb-6">
                     <div>
-                      <p className="text-gray-400 text-sm mb-2">Pending Selfie</p>
-                      <div className="aspect-square rounded-lg overflow-hidden bg-gray-700 border-2 border-pink-500">
+                      <p className="text-gray-400 text-sm mb-2">
+                        {selectedItem.is_cross_profile_match ? (
+                          <span className="text-orange-400 font-medium">New Photo (Submitted)</span>
+                        ) : (
+                          'Pending Selfie'
+                        )}
+                      </p>
+                      <div className={`aspect-square rounded-lg overflow-hidden bg-gray-700 border-2 ${
+                        selectedItem.is_cross_profile_match ? 'border-orange-500' : 'border-pink-500'
+                      }`}>
                         {selectedItem.pending_selfie_url ? (
                           <img
                             src={selectedItem.pending_selfie_url}
@@ -454,7 +504,11 @@ export default function MailInboxPage() {
                             selectedItem.pending_selfie_url,
                             `pending-selfie-${selectedItem.phone_number}-${Date.now()}.jpg`
                           )}
-                          className="w-full mt-2 bg-pink-600 hover:bg-pink-700 text-white text-sm font-medium py-2 px-3 rounded-lg transition-colors flex items-center justify-center gap-2"
+                          className={`w-full mt-2 text-white text-sm font-medium py-2 px-3 rounded-lg transition-colors flex items-center justify-center gap-2 ${
+                            selectedItem.is_cross_profile_match
+                              ? 'bg-orange-600 hover:bg-orange-700'
+                              : 'bg-pink-600 hover:bg-pink-700'
+                          }`}
                         >
                           <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
@@ -464,7 +518,13 @@ export default function MailInboxPage() {
                       )}
                     </div>
                     <div>
-                      <p className="text-gray-400 text-sm mb-2">Profile Selfie</p>
+                      <p className="text-gray-400 text-sm mb-2">
+                        {selectedItem.is_cross_profile_match ? (
+                          <span className="text-blue-400 font-medium">Matched Profile Photo</span>
+                        ) : (
+                          'Profile Selfie'
+                        )}
+                      </p>
                       <div className="aspect-square rounded-lg overflow-hidden bg-gray-700 border-2 border-blue-500">
                         {selectedItem.profile_selfie_url ? (
                           <img

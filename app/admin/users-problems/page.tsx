@@ -89,7 +89,16 @@ interface ProblemUsersData {
   };
 }
 
-type TabType = 'emergency' | 'upgraded' | 'logout' | 'downgraded' | 'inactive' | 'device-reset';
+type TabType = 'emergency' | 'upgraded' | 'logout' | 'downgraded' | 'inactive' | 'device-reset' | 'delete-person';
+
+interface DeletePersonPreview {
+  id: string;
+  phones: string[];
+  selfieCount: number;
+  selfieUrls: string[];
+  selfieUuids: string[];
+  reviewCount: number;
+}
 
 export default function UsersProblemsPage() {
   const router = useRouter();
@@ -107,6 +116,15 @@ export default function UsersProblemsPage() {
   const [resetError, setResetError] = useState<string | null>(null);
   const [resetSuccess, setResetSuccess] = useState<string | null>(null);
   const [resetUsername, setResetUsername] = useState('');
+
+  // Delete Person State
+  const [deletePhone, setDeletePhone] = useState('');
+  const [deleteConfirm, setDeleteConfirm] = useState('');
+  const [deleteStep, setDeleteStep] = useState<'search' | 'preview' | 'deleting' | 'success'>('search');
+  const [deleteLoading, setDeleteLoading] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [deletePreview, setDeletePreview] = useState<DeletePersonPreview | null>(null);
+  const [deleteResults, setDeleteResults] = useState<any>(null);
 
   const fetchData = useCallback(async (token: string, showLoading = true) => {
     if (showLoading) setIsLoading(true);
@@ -272,6 +290,99 @@ export default function UsersProblemsPage() {
     setResetUsername('');
   };
 
+  // Delete Person Functions
+  const handleDeletePreview = async () => {
+    if (!deletePhone.trim()) {
+      setDeleteError('Please enter a phone number');
+      return;
+    }
+
+    const token = localStorage.getItem('adminToken');
+    if (!token) return;
+
+    setDeleteLoading(true);
+    setDeleteError(null);
+
+    try {
+      const response = await fetch('/api/admin/delete-person/preview', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({ phone: deletePhone.trim() }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.detail || data.error || 'Failed to find person');
+      }
+
+      if (!data.found) {
+        throw new Error(data.error || 'Person not found');
+      }
+
+      setDeletePreview(data.person);
+      setDeleteStep('preview');
+    } catch (err) {
+      setDeleteError(err instanceof Error ? err.message : 'Failed to find person');
+    } finally {
+      setDeleteLoading(false);
+    }
+  };
+
+  const handleDeletePerson = async () => {
+    if (deleteConfirm !== 'DELETE') {
+      setDeleteError('Please type DELETE to confirm');
+      return;
+    }
+
+    const token = localStorage.getItem('adminToken');
+    if (!token) return;
+
+    setDeleteLoading(true);
+    setDeleteError(null);
+    setDeleteStep('deleting');
+
+    try {
+      const response = await fetch('/api/admin/delete-person', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          phone: deletePhone.trim(),
+          confirm: 'DELETE',
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.detail || data.error || 'Failed to delete person');
+      }
+
+      setDeleteResults(data.results);
+      setDeleteStep('success');
+    } catch (err) {
+      setDeleteError(err instanceof Error ? err.message : 'Failed to delete person');
+      setDeleteStep('preview');
+    } finally {
+      setDeleteLoading(false);
+    }
+  };
+
+  const handleDeleteReset = () => {
+    setDeletePhone('');
+    setDeleteConfirm('');
+    setDeleteStep('search');
+    setDeleteError(null);
+    setDeletePreview(null);
+    setDeleteResults(null);
+  };
+
   return (
     <div className="min-h-screen bg-gray-800">
       {/* Header */}
@@ -348,6 +459,7 @@ export default function UsersProblemsPage() {
             { id: 'downgraded', label: 'Downgrades', count: data?.stats.totalDowngrades },
             { id: 'inactive', label: 'Inactive', count: data?.stats.totalInactive },
             { id: 'device-reset', label: 'Device Reset', count: undefined },
+            { id: 'delete-person', label: 'Delete Person', count: undefined },
           ].map((tab) => (
             <button
               key={tab.id}
@@ -854,6 +966,263 @@ export default function UsersProblemsPage() {
                     className="w-full py-3 bg-purple-600 hover:bg-purple-700 text-white font-semibold rounded-lg transition-colors"
                   >
                     Reset Another Device
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Delete Person Tab */}
+        {activeTab === 'delete-person' && (
+          <div className="bg-gray-800 rounded-xl p-6">
+            <div className="max-w-lg mx-auto">
+              <div className="text-center mb-6">
+                <div className="w-16 h-16 bg-red-600/20 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <svg className="w-8 h-8 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                  </svg>
+                </div>
+                <h2 className="text-xl font-bold text-white mb-2">Delete Person</h2>
+                <p className="text-gray-400 text-sm">
+                  Permanently delete a person from all systems: Luxand, Firebase Storage, and Firestore.
+                </p>
+              </div>
+
+              {/* Warning Banner */}
+              <div className="mb-6 p-4 bg-red-900/30 border border-red-700 rounded-lg">
+                <div className="flex items-start gap-3">
+                  <svg className="w-5 h-5 text-red-400 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                  </svg>
+                  <div>
+                    <p className="text-red-300 font-semibold text-sm">This action is irreversible!</p>
+                    <p className="text-red-400/80 text-xs mt-1">
+                      All photos, reviews, and profile data will be permanently deleted.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Error Message */}
+              {deleteError && (
+                <div className="mb-4 p-3 bg-red-900/30 border border-red-700 rounded-lg text-red-400 text-sm">
+                  {deleteError}
+                </div>
+              )}
+
+              {/* Step 1: Search */}
+              {deleteStep === 'search' && (
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-300 mb-2">
+                      Person Phone Number
+                    </label>
+                    <input
+                      type="text"
+                      value={deletePhone}
+                      onChange={(e) => setDeletePhone(e.target.value)}
+                      placeholder="+1234567890"
+                      className="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent"
+                    />
+                    <p className="mt-1 text-xs text-gray-500">Enter the phone number associated with the Person profile</p>
+                  </div>
+                  <button
+                    onClick={handleDeletePreview}
+                    disabled={deleteLoading}
+                    className="w-full py-3 bg-red-600 hover:bg-red-700 text-white font-semibold rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                  >
+                    {deleteLoading ? (
+                      <>
+                        <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                        Searching...
+                      </>
+                    ) : (
+                      <>
+                        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                        </svg>
+                        Search Person
+                      </>
+                    )}
+                  </button>
+                </div>
+              )}
+
+              {/* Step 2: Preview */}
+              {deleteStep === 'preview' && deletePreview && (
+                <div className="space-y-4">
+                  <div className="p-4 bg-gray-700/50 rounded-lg">
+                    <h3 className="text-white font-semibold mb-3">Person Found:</h3>
+                    <div className="space-y-2 text-sm">
+                      <div className="flex justify-between">
+                        <span className="text-gray-400">Document ID:</span>
+                        <span className="text-white font-mono text-xs">{deletePreview.id}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-400">Phone Numbers:</span>
+                        <span className="text-white">{deletePreview.phones.length}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-400">Selfies:</span>
+                        <span className="text-white">{deletePreview.selfieCount}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-400">Reviews:</span>
+                        <span className="text-white">{deletePreview.reviewCount}</span>
+                      </div>
+                    </div>
+
+                    {/* Phone numbers list */}
+                    {deletePreview.phones.length > 0 && (
+                      <div className="mt-3 pt-3 border-t border-gray-600">
+                        <p className="text-xs text-gray-400 mb-2">Associated phone numbers:</p>
+                        <div className="flex flex-wrap gap-2">
+                          {deletePreview.phones.map((phone, idx) => (
+                            <span key={idx} className="px-2 py-1 bg-gray-600 rounded text-xs text-white font-mono">
+                              {phone}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Selfie thumbnails */}
+                    {deletePreview.selfieUrls.length > 0 && (
+                      <div className="mt-3 pt-3 border-t border-gray-600">
+                        <p className="text-xs text-gray-400 mb-2">Photos to be deleted:</p>
+                        <div className="flex gap-2 flex-wrap">
+                          {deletePreview.selfieUrls.map((url, idx) => (
+                            <img
+                              key={idx}
+                              src={url}
+                              alt={`Selfie ${idx + 1}`}
+                              className="w-16 h-16 object-cover rounded-lg border-2 border-red-500"
+                            />
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* What will be deleted */}
+                  <div className="p-4 bg-red-900/20 border border-red-700/50 rounded-lg">
+                    <p className="text-red-300 font-semibold text-sm mb-2">Will be deleted:</p>
+                    <ul className="text-xs text-red-400/80 space-y-1">
+                      <li>• {deletePreview.selfieCount} photo(s) from Luxand facial recognition</li>
+                      <li>• {deletePreview.selfieCount} image(s) from Firebase Storage</li>
+                      <li>• {deletePreview.reviewCount} review(s) attached to this profile</li>
+                      <li>• The entire Firestore document</li>
+                    </ul>
+                  </div>
+
+                  {/* Confirmation input */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-300 mb-2">
+                      Type <span className="text-red-400 font-bold">DELETE</span> to confirm
+                    </label>
+                    <input
+                      type="text"
+                      value={deleteConfirm}
+                      onChange={(e) => setDeleteConfirm(e.target.value.toUpperCase())}
+                      placeholder="Type DELETE"
+                      className="w-full px-4 py-3 bg-gray-700 border border-red-600 rounded-lg text-white text-center font-bold tracking-widest placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent"
+                    />
+                  </div>
+
+                  <div className="flex gap-3">
+                    <button
+                      onClick={handleDeleteReset}
+                      className="flex-1 py-3 bg-gray-700 hover:bg-gray-600 text-white font-semibold rounded-lg transition-colors"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      onClick={handleDeletePerson}
+                      disabled={deleteLoading || deleteConfirm !== 'DELETE'}
+                      className="flex-1 py-3 bg-red-600 hover:bg-red-700 text-white font-semibold rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                    >
+                      {deleteLoading ? (
+                        <>
+                          <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                          Deleting...
+                        </>
+                      ) : (
+                        <>
+                          <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                          </svg>
+                          Delete Permanently
+                        </>
+                      )}
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Step 3: Deleting */}
+              {deleteStep === 'deleting' && (
+                <div className="text-center py-8">
+                  <div className="w-16 h-16 border-4 border-red-500 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+                  <p className="text-white font-semibold">Deleting person...</p>
+                  <p className="text-gray-400 text-sm mt-2">This may take a few seconds</p>
+                </div>
+              )}
+
+              {/* Step 4: Success */}
+              {deleteStep === 'success' && deleteResults && (
+                <div className="text-center space-y-4">
+                  <div className="w-16 h-16 bg-green-600/20 rounded-full flex items-center justify-center mx-auto">
+                    <svg className="w-8 h-8 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                    </svg>
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-bold text-white mb-2">Person Deleted Successfully</h3>
+                    <div className="p-4 bg-gray-700/50 rounded-lg text-left">
+                      <p className="text-sm text-gray-300 mb-2">
+                        <span className="font-semibold text-white">Document ID:</span>{' '}
+                        <span className="font-mono text-xs">{deleteResults.person_id}</span>
+                      </p>
+                      <p className="text-sm text-gray-300 mb-3">
+                        <span className="font-semibold text-white">Phones:</span>{' '}
+                        {deleteResults.phones?.join(', ') || 'N/A'}
+                      </p>
+                      <div className="space-y-2 text-sm">
+                        <div className="flex justify-between">
+                          <span className="text-gray-400">Luxand deleted:</span>
+                          <span className="text-green-400">{deleteResults.luxand_deleted?.length || 0}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-gray-400">Storage deleted:</span>
+                          <span className="text-green-400">{deleteResults.storage_deleted?.length || 0}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-gray-400">Firestore deleted:</span>
+                          <span className={deleteResults.firestore_deleted ? 'text-green-400' : 'text-red-400'}>
+                            {deleteResults.firestore_deleted ? 'Yes' : 'No'}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Errors if any */}
+                      {deleteResults.luxand_errors?.length > 0 && (
+                        <div className="mt-3 pt-3 border-t border-gray-600">
+                          <p className="text-xs text-orange-400 mb-1">Luxand warnings:</p>
+                          <ul className="text-xs text-gray-500">
+                            {deleteResults.luxand_errors.map((err: string, idx: number) => (
+                              <li key={idx}>• {err}</li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                  <button
+                    onClick={handleDeleteReset}
+                    className="w-full py-3 bg-gray-700 hover:bg-gray-600 text-white font-semibold rounded-lg transition-colors"
+                  >
+                    Delete Another Person
                   </button>
                 </div>
               )}
