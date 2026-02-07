@@ -188,11 +188,12 @@ export default function MailInboxPage() {
       console.error('Failed to create audio element:', err);
     }
 
-    // Unlock audio on ANY user interaction (click, key, touch)
+    // Unlock audio function
     const unlockAudio = () => {
       if (audioUnlockedRef.current) return;
 
       audioUnlockedRef.current = true;
+      localStorage.setItem('adminAudioUnlocked', Date.now().toString());
       console.log('🔓 Audio unlocked - notifications will now play');
 
       // Play a silent sound to fully unlock audio on iOS/Safari
@@ -206,7 +207,23 @@ export default function MailInboxPage() {
       }
     };
 
-    // Listen for user interactions
+    // Check if audio was already unlocked in Dashboard (within last 24 hours)
+    const lastUnlocked = localStorage.getItem('adminAudioUnlocked');
+    if (lastUnlocked) {
+      const unlockedTime = parseInt(lastUnlocked, 10);
+      const hoursSinceUnlock = (Date.now() - unlockedTime) / (1000 * 60 * 60);
+
+      // If unlocked within last 24 hours, auto-unlock here too
+      if (hoursSinceUnlock < 24) {
+        console.log('🔓 Audio pre-unlocked from Dashboard interaction');
+        // Small delay to ensure audio element is ready
+        setTimeout(() => {
+          unlockAudio();
+        }, 500);
+      }
+    }
+
+    // Also listen for user interactions on this page
     document.addEventListener('click', unlockAudio);
     document.addEventListener('keydown', unlockAudio);
     document.addEventListener('touchstart', unlockAudio);

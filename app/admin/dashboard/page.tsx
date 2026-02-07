@@ -617,6 +617,8 @@ export default function AdminDashboard() {
 
         if (globalAudioContextRef.current.state === 'running') {
           audioUnlockedRef.current = true;
+          // Guardar en localStorage para que Mail Inbox sepa que el audio ya fue desbloqueado
+          localStorage.setItem('adminAudioUnlocked', Date.now().toString());
           console.log('🔓 Audio desbloqueado por interacción del usuario');
         }
       } catch (e) {
