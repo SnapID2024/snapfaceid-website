@@ -90,140 +90,95 @@ export default function MailInboxPage() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
   const [prevUnreadCount, setPrevUnreadCount] = useState(0);
+  const audioContextRef = useRef<AudioContext | null>(null);
   const audioUnlockedRef = useRef(false);
-  const audioElementRef = useRef<HTMLAudioElement | null>(null);
 
-  // Create and play notification sound
+  // Play notification sound using Web Audio API directly
   const playNotificationSound = useCallback(() => {
+    console.log('🔊 playNotificationSound called, unlocked:', audioUnlockedRef.current);
+
     if (!audioUnlockedRef.current) {
-      console.log('Audio not yet unlocked (waiting for user interaction)');
+      console.log('⚠️ Audio not unlocked - sound will not play');
       return;
     }
 
     try {
-      // Create a fresh audio element each time for reliability
-      const audio = audioElementRef.current;
-      if (audio) {
-        audio.currentTime = 0;
-        audio.play().then(() => {
-          console.log('🔔 Notification sound played successfully');
-        }).catch(err => {
-          console.error('Failed to play:', err);
-        });
+      // Get or create AudioContext
+      if (!audioContextRef.current || audioContextRef.current.state === 'closed') {
+        const AudioContextClass = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+        audioContextRef.current = new AudioContextClass();
       }
+
+      const ctx = audioContextRef.current;
+
+      // Resume if suspended
+      if (ctx.state === 'suspended') {
+        ctx.resume();
+      }
+
+      // Create two-tone notification beep
+      const playTone = (frequency: number, startTime: number, duration: number) => {
+        const oscillator = ctx.createOscillator();
+        const gainNode = ctx.createGain();
+
+        oscillator.connect(gainNode);
+        gainNode.connect(ctx.destination);
+
+        oscillator.frequency.value = frequency;
+        oscillator.type = 'sine';
+
+        gainNode.gain.setValueAtTime(0.5, startTime);
+        gainNode.gain.exponentialRampToValueAtTime(0.01, startTime + duration);
+
+        oscillator.start(startTime);
+        oscillator.stop(startTime + duration);
+      };
+
+      const now = ctx.currentTime;
+      playTone(880, now, 0.15);        // First beep: 880Hz
+      playTone(1100, now + 0.2, 0.15); // Second beep: 1100Hz
+
+      console.log('🔔 Notification sound played!');
     } catch (err) {
-      console.error('Error in playNotificationSound:', err);
+      console.error('❌ Error playing notification:', err);
     }
   }, []);
 
-  // Initialize audio system - unlocks on first user interaction
+  // Initialize and unlock audio on user interaction
   useEffect(() => {
-    // Create the audio element with a data URI of a notification sound
-    // Two-tone chime: 880Hz then 1100Hz
-    const createAudioElement = () => {
-      const audioContext = new (window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext)();
-      const sampleRate = audioContext.sampleRate;
-      const duration = 0.6;
-      const buffer = audioContext.createBuffer(1, sampleRate * duration, sampleRate);
-      const data = buffer.getChannelData(0);
-
-      for (let i = 0; i < buffer.length; i++) {
-        const t = i / sampleRate;
-        let sample = 0;
-        // First beep: 880Hz, 0-0.2s
-        if (t < 0.2) {
-          sample = Math.sin(2 * Math.PI * 880 * t) * Math.exp(-t * 5) * 0.6;
-        }
-        // Second beep: 1100Hz, 0.25-0.45s
-        else if (t >= 0.25 && t < 0.45) {
-          const t2 = t - 0.25;
-          sample = Math.sin(2 * Math.PI * 1100 * t2) * Math.exp(-t2 * 5) * 0.6;
-        }
-        data[i] = sample;
-      }
-
-      // Convert to WAV
-      const numChannels = 1;
-      const bitDepth = 16;
-      const bytesPerSample = bitDepth / 8;
-      const blockAlign = numChannels * bytesPerSample;
-      const samples = data.length;
-      const dataSize = samples * blockAlign;
-      const arrayBuffer = new ArrayBuffer(44 + dataSize);
-      const view = new DataView(arrayBuffer);
-
-      // WAV header
-      const writeStr = (o: number, s: string) => { for (let i = 0; i < s.length; i++) view.setUint8(o + i, s.charCodeAt(i)); };
-      writeStr(0, 'RIFF');
-      view.setUint32(4, 36 + dataSize, true);
-      writeStr(8, 'WAVE');
-      writeStr(12, 'fmt ');
-      view.setUint32(16, 16, true);
-      view.setUint16(20, 1, true);
-      view.setUint16(22, numChannels, true);
-      view.setUint32(24, sampleRate, true);
-      view.setUint32(28, sampleRate * blockAlign, true);
-      view.setUint16(32, blockAlign, true);
-      view.setUint16(34, bitDepth, true);
-      writeStr(36, 'data');
-      view.setUint32(40, dataSize, true);
-
-      let offset = 44;
-      for (let i = 0; i < samples; i++) {
-        const s = Math.max(-1, Math.min(1, data[i]));
-        view.setInt16(offset, s < 0 ? s * 0x8000 : s * 0x7FFF, true);
-        offset += 2;
-      }
-
-      audioContext.close();
-      return URL.createObjectURL(new Blob([arrayBuffer], { type: 'audio/wav' }));
-    };
-
-    try {
-      const soundUrl = createAudioElement();
-      const audio = new Audio(soundUrl);
-      audio.volume = 0.8;
-      audioElementRef.current = audio;
-    } catch (err) {
-      console.error('Failed to create audio element:', err);
-    }
-
-    // Unlock audio function
     const unlockAudio = () => {
       if (audioUnlockedRef.current) return;
 
-      audioUnlockedRef.current = true;
-      localStorage.setItem('adminAudioUnlocked', Date.now().toString());
-      console.log('🔓 Audio unlocked - notifications will now play');
+      try {
+        // Create AudioContext on first interaction
+        const AudioContextClass = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+        audioContextRef.current = new AudioContextClass();
 
-      // Play a silent sound to fully unlock audio on iOS/Safari
-      if (audioElementRef.current) {
-        audioElementRef.current.volume = 0;
-        audioElementRef.current.play().then(() => {
-          audioElementRef.current!.pause();
-          audioElementRef.current!.currentTime = 0;
-          audioElementRef.current!.volume = 0.8;
-        }).catch(() => {});
+        // Resume if needed
+        if (audioContextRef.current.state === 'suspended') {
+          audioContextRef.current.resume();
+        }
+
+        audioUnlockedRef.current = true;
+        console.log('🔓 Audio UNLOCKED! Notifications will now work.');
+
+        // Play a quick test beep to confirm
+        const ctx = audioContextRef.current;
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.frequency.value = 440;
+        gain.gain.setValueAtTime(0.1, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.1);
+        osc.start(ctx.currentTime);
+        osc.stop(ctx.currentTime + 0.1);
+      } catch (err) {
+        console.error('Failed to unlock audio:', err);
       }
     };
 
-    // Check if audio was already unlocked in Dashboard (within last 24 hours)
-    const lastUnlocked = localStorage.getItem('adminAudioUnlocked');
-    if (lastUnlocked) {
-      const unlockedTime = parseInt(lastUnlocked, 10);
-      const hoursSinceUnlock = (Date.now() - unlockedTime) / (1000 * 60 * 60);
-
-      // If unlocked within last 24 hours, auto-unlock here too
-      if (hoursSinceUnlock < 24) {
-        console.log('🔓 Audio pre-unlocked from Dashboard interaction');
-        // Small delay to ensure audio element is ready
-        setTimeout(() => {
-          unlockAudio();
-        }, 500);
-      }
-    }
-
-    // Also listen for user interactions on this page
+    // Listen for user interactions
     document.addEventListener('click', unlockAudio);
     document.addEventListener('keydown', unlockAudio);
     document.addEventListener('touchstart', unlockAudio);
