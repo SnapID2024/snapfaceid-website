@@ -412,6 +412,8 @@ export default function AdminDashboard() {
 
   // Estado para contador de mail inbox sin leer
   const [unreadModerationCount, setUnreadModerationCount] = useState(0);
+  const prevUnreadModerationCountRef = useRef(0);
+  const [notificationsPermission, setNotificationsPermission] = useState<NotificationPermission>('default');
 
   // Platform stats for header display
   const [platformStats, setPlatformStats] = useState<PlatformStats | null>(null);
@@ -834,6 +836,52 @@ export default function AdminDashboard() {
     return () => clearInterval(interval);
   }, []);
 
+  // Request notification permission on load
+  useEffect(() => {
+    if ('Notification' in window) {
+      setNotificationsPermission(Notification.permission);
+
+      // Auto-request permission if not decided yet
+      if (Notification.permission === 'default') {
+        Notification.requestPermission().then(permission => {
+          setNotificationsPermission(permission);
+          console.log('📬 Notification permission:', permission);
+        });
+      }
+    }
+  }, []);
+
+  // Send browser notification for new Mail Inbox items
+  const sendMailInboxNotification = useCallback((newCount: number) => {
+    if (!('Notification' in window) || Notification.permission !== 'granted') {
+      console.log('📬 Notifications not available or not permitted');
+      return;
+    }
+
+    try {
+      const notification = new Notification('📬 New Mail Inbox Item', {
+        body: `You have ${newCount} pending review${newCount > 1 ? 's' : ''} in Mail Inbox`,
+        icon: 'https://d64gsuwffb70l.cloudfront.net/6834a8f25630f332851529fb_1765418801539_cd77434c.png',
+        tag: 'mail-inbox', // Prevents duplicate notifications
+        requireInteraction: true, // Stays until user interacts
+      });
+
+      // Close after 10 seconds
+      setTimeout(() => notification.close(), 10000);
+
+      // Click to open Mail Inbox
+      notification.onclick = () => {
+        window.focus();
+        window.location.href = '/admin/mail-inbox';
+        notification.close();
+      };
+
+      console.log('📬 Notification sent for', newCount, 'items');
+    } catch (err) {
+      console.error('Failed to send notification:', err);
+    }
+  }, []);
+
   // Fetch unread moderation count for Mail Inbox badge
   useEffect(() => {
     const fetchUnreadModerationCount = async () => {
@@ -849,7 +897,16 @@ export default function AdminDashboard() {
 
         if (response.ok) {
           const data = await response.json();
-          setUnreadModerationCount(data.unread_count || 0);
+          const newCount = data.unread_count || 0;
+
+          // Send notification if count increased
+          if (newCount > prevUnreadModerationCountRef.current && prevUnreadModerationCountRef.current >= 0) {
+            console.log('📬 Mail Inbox count increased:', prevUnreadModerationCountRef.current, '->', newCount);
+            sendMailInboxNotification(newCount);
+          }
+
+          prevUnreadModerationCountRef.current = newCount;
+          setUnreadModerationCount(newCount);
         }
       } catch (err) {
         console.error('Error fetching moderation count:', err);
@@ -860,7 +917,7 @@ export default function AdminDashboard() {
     // Refresh every 30 seconds
     const interval = setInterval(fetchUnreadModerationCount, 30000);
     return () => clearInterval(interval);
-  }, []);
+  }, [sendMailInboxNotification]);
 
   // Fetch platform stats for header display
   useEffect(() => {
