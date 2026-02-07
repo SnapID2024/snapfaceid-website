@@ -504,7 +504,7 @@ export default function MailInboxPage() {
                       {selectedItem.pending_selfie_url && (
                         <button
                           onClick={() => handleDownloadImage(
-                            selectedItem.pending_selfie_url,
+                            selectedItem.pending_selfie_url!,
                             `pending-selfie-${selectedItem.phone_number}-${Date.now()}.jpg`
                           )}
                           className={`w-full mt-2 text-white text-sm font-medium py-2 px-3 rounded-lg transition-colors flex items-center justify-center gap-2 ${
