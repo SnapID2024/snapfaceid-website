@@ -100,7 +100,7 @@ export default function GuardianMap({ selectedAlert, allAlerts, onAlertSelect, c
   const lastCenteredAlertRef = useRef<string | null>(null);  // 'initial' o ID de alerta
   const currentLayerRef = useRef<L.TileLayer | null>(null);
   const [mapReady, setMapReady] = useState(false);
-  const [activeLayer, setActiveLayer] = useState<'google' | 'esri'>('google');
+  const [activeLayer, setActiveLayer] = useState<'google' | 'esri'>('esri');
   const [currentZoom, setCurrentZoom] = useState(17);
 
   // Layer definitions
@@ -134,8 +134,8 @@ export default function GuardianMap({ selectedAlert, allAlerts, onAlertSelect, c
       minZoom: 2,
     }).setView([25.7617, -80.1918], 17);
 
-    // Start with Google Hybrid (satellite + labels)
-    const initialLayer = L.tileLayer(layers.google.url, layers.google.options).addTo(map);
+    // Start with ESRI HD (satellite imagery)
+    const initialLayer = L.tileLayer(layers.esri.url, layers.esri.options).addTo(map);
     currentLayerRef.current = initialLayer;
 
     // Add zoom control
@@ -145,7 +145,7 @@ export default function GuardianMap({ selectedAlert, allAlerts, onAlertSelect, c
     L.control.attribution({
       position: 'bottomright',
       prefix: false,
-    }).addTo(map).addAttribution('© Google Maps');
+    }).addTo(map).addAttribution('© ESRI');
 
     // Listen for zoom changes to update marker sizes
     map.on('zoomend', () => {
