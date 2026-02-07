@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
@@ -89,6 +89,38 @@ export default function MailInboxPage() {
   const [selectedItem, setSelectedItem] = useState<ModerationItem | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [prevUnreadCount, setPrevUnreadCount] = useState(0);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+
+  // Initialize audio element for notification sound
+  useEffect(() => {
+    // Create audio element with a simple notification sound
+    // Using a data URL for a short beep sound (no external dependency)
+    const audioContext = typeof window !== 'undefined' ? new (window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext)() : null;
+
+    if (audioContext) {
+      // Create a simple beep sound programmatically
+      const playBeep = () => {
+        const oscillator = audioContext.createOscillator();
+        const gainNode = audioContext.createGain();
+
+        oscillator.connect(gainNode);
+        gainNode.connect(audioContext.destination);
+
+        oscillator.frequency.value = 800; // Frequency in Hz
+        oscillator.type = 'sine';
+
+        gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+        gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.3);
+
+        oscillator.start(audioContext.currentTime);
+        oscillator.stop(audioContext.currentTime + 0.3);
+      };
+
+      // Store the function for later use
+      (window as unknown as { playNotificationSound: () => void }).playNotificationSound = playBeep;
+    }
+  }, []);
 
   const fetchItems = useCallback(async (token: string, showLoading = true) => {
     if (showLoading) setIsLoading(true);
@@ -139,6 +171,46 @@ export default function MailInboxPage() {
 
     return () => clearInterval(interval);
   }, [fetchItems]);
+
+  // Play notification sound when new unread items arrive
+  useEffect(() => {
+    const playSound = (window as unknown as { playNotificationSound?: () => void }).playNotificationSound;
+
+    // Play sound if unread count increased (new items)
+    if (unreadCount > prevUnreadCount && prevUnreadCount !== 0) {
+      if (playSound) {
+        playSound();
+        // Play twice for new items
+        setTimeout(() => playSound(), 400);
+      }
+    }
+
+    setPrevUnreadCount(unreadCount);
+  }, [unreadCount, prevUnreadCount]);
+
+  // Periodic reminder sound every 60 seconds while there are unread items
+  useEffect(() => {
+    if (unreadCount === 0) return;
+
+    const playSound = (window as unknown as { playNotificationSound?: () => void }).playNotificationSound;
+
+    const interval = setInterval(() => {
+      if (playSound && unreadCount > 0) {
+        playSound();
+      }
+    }, 60000); // Every 60 seconds
+
+    return () => clearInterval(interval);
+  }, [unreadCount]);
+
+  // Update page title with unread count
+  useEffect(() => {
+    if (unreadCount > 0) {
+      document.title = `(${unreadCount}) Mail Inbox - SnapfaceID Admin`;
+    } else {
+      document.title = 'Mail Inbox - SnapfaceID Admin';
+    }
+  }, [unreadCount]);
 
   const formatDate = (dateStr: string | null) => {
     if (!dateStr) return '';
@@ -303,8 +375,8 @@ export default function MailInboxPage() {
                 <span className="text-white font-semibold hidden sm:block">Mail Inbox</span>
               </Link>
               {unreadCount > 0 && (
-                <span className="bg-pink-500 text-white text-xs font-bold px-2 py-1 rounded-full">
-                  {unreadCount} unread
+                <span className="bg-yellow-500 text-black text-xs font-bold px-3 py-1 rounded-full animate-pulse shadow-lg shadow-yellow-500/50">
+                  {unreadCount} NEW
                 </span>
               )}
             </div>
