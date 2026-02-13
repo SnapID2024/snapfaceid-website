@@ -597,114 +597,72 @@ export default function UsersProblemsPage() {
 
         {/* Upgraded Users Tab */}
         {!isLoading && !error && data && activeTab === 'upgraded' && (
-          <div className="space-y-6">
-            {/* Pending Upgrade Section */}
-            {data.pendingUpgradeUsers && data.pendingUpgradeUsers.length > 0 && (
-              <div>
-                <div className="flex items-center gap-3 mb-3">
-                  <h3 className="text-sm font-semibold text-orange-400 uppercase tracking-wider">Pending Upgrade</h3>
-                  <span className="px-2 py-0.5 text-xs font-bold rounded-full bg-orange-600/30 text-orange-400 border border-orange-600/50">
-                    {data.pendingUpgradeUsers.length}
-                  </span>
-                </div>
-                <div className="bg-gray-800 rounded-xl overflow-hidden border border-orange-600/30">
-                  <table className="w-full">
-                    <thead>
-                      <tr className="bg-orange-900/20 text-left">
-                        <th className="px-4 py-3 text-xs font-semibold text-gray-300 uppercase tracking-wider w-48">User</th>
-                        <th className="px-4 py-3 text-xs font-semibold text-gray-300 uppercase tracking-wider w-44">Phone</th>
-                        <th className="px-4 py-3 text-xs font-semibold text-gray-300 uppercase tracking-wider w-40">Status</th>
-                        <th className="px-4 py-3 text-xs font-semibold text-gray-300 uppercase tracking-wider text-right">Registered</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-gray-700">
-                      {data.pendingUpgradeUsers.map((user) => (
-                        <tr key={user.id} className="hover:bg-gray-700/50">
-                          <td className="px-4 py-3">
-                            <span className="text-sm font-medium text-white">{user.nickname}</span>
-                          </td>
-                          <td className="px-4 py-3">
-                            <span className="text-sm text-gray-300 font-mono">{user.phone}</span>
-                          </td>
-                          <td className="px-4 py-3">
+          <div className="bg-gray-800 rounded-xl overflow-hidden">
+            <table className="w-full">
+              <thead>
+                <tr className="bg-gray-700/50 text-left">
+                  <th className="px-4 py-3 text-xs font-semibold text-gray-300 uppercase tracking-wider w-48">User</th>
+                  <th className="px-4 py-3 text-xs font-semibold text-gray-300 uppercase tracking-wider w-44">Phone</th>
+                  <th className="px-4 py-3 text-xs font-semibold text-gray-300 uppercase tracking-wider w-40">Source</th>
+                  <th className="px-4 py-3 text-xs font-semibold text-gray-300 uppercase tracking-wider w-32">Status</th>
+                  <th className="px-4 py-3 text-xs font-semibold text-gray-300 uppercase tracking-wider text-right">Date</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-700">
+                {data.upgradedUsers.length === 0 && (!data.pendingUpgradeUsers || data.pendingUpgradeUsers.length === 0) ? (
+                  <tr>
+                    <td colSpan={5} className="px-4 py-12 text-center text-gray-500">
+                      No users found
+                    </td>
+                  </tr>
+                ) : (
+                  [
+                    ...data.upgradedUsers.map((u) => ({ type: 'active' as const, nickname: u.nickname, phone: u.phone, source: u.subscriptionSource || 'stripe', date: u.upgradedAt, dateUnix: u.upgradedAtUnix, id: u.id })),
+                    ...(data.pendingUpgradeUsers || []).map((u) => ({ type: 'pending' as const, nickname: u.nickname, phone: u.phone, source: 'pending', date: u.registeredAt, dateUnix: u.registeredAtUnix, id: u.id })),
+                  ]
+                    .sort((a, b) => b.dateUnix - a.dateUnix)
+                    .map((row) => (
+                      <tr key={row.id} className="hover:bg-gray-700/50">
+                        <td className="px-4 py-3">
+                          <span className="text-sm font-medium text-white">{row.nickname}</span>
+                        </td>
+                        <td className="px-4 py-3">
+                          <span className="text-sm text-gray-300 font-mono">{row.phone}</span>
+                        </td>
+                        <td className="px-4 py-3">
+                          {row.source === 'promo_code' ? (
+                            <span className="px-2 py-1 rounded text-xs font-medium bg-purple-600/30 text-purple-400 border border-purple-600/50">
+                              Promo Code
+                            </span>
+                          ) : row.source === 'pending' ? (
+                            <span className="px-2 py-1 rounded text-xs font-medium bg-gray-600 text-gray-300">
+                              —
+                            </span>
+                          ) : (
+                            <span className="px-2 py-1 rounded text-xs font-medium bg-blue-600/30 text-blue-400 border border-blue-600/50">
+                              Stripe
+                            </span>
+                          )}
+                        </td>
+                        <td className="px-4 py-3">
+                          {row.type === 'pending' ? (
                             <span className="px-2 py-1 rounded text-xs font-medium bg-orange-600/30 text-orange-400 border border-orange-600/50">
                               Pending Upgrade
                             </span>
-                          </td>
-                          <td className="px-4 py-3 text-right">
-                            <span className="text-sm text-gray-400">{formatDate(user.registeredAt)}</span>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            )}
-
-            {/* Completed Upgrades Section */}
-            <div>
-              {data.pendingUpgradeUsers && data.pendingUpgradeUsers.length > 0 && (
-                <div className="flex items-center gap-3 mb-3">
-                  <h3 className="text-sm font-semibold text-green-400 uppercase tracking-wider">Completed Upgrades</h3>
-                  <span className="px-2 py-0.5 text-xs font-bold rounded-full bg-green-600/30 text-green-400 border border-green-600/50">
-                    {data.upgradedUsers.length}
-                  </span>
-                </div>
-              )}
-              <div className="bg-gray-800 rounded-xl overflow-hidden">
-                <table className="w-full">
-                  <thead>
-                    <tr className="bg-gray-700/50 text-left">
-                      <th className="px-4 py-3 text-xs font-semibold text-gray-300 uppercase tracking-wider w-48">User</th>
-                      <th className="px-4 py-3 text-xs font-semibold text-gray-300 uppercase tracking-wider w-44">Phone</th>
-                      <th className="px-4 py-3 text-xs font-semibold text-gray-300 uppercase tracking-wider w-40">Source</th>
-                      <th className="px-4 py-3 text-xs font-semibold text-gray-300 uppercase tracking-wider w-32">Status</th>
-                      <th className="px-4 py-3 text-xs font-semibold text-gray-300 uppercase tracking-wider text-right">Activated</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-700">
-                    {data.upgradedUsers.length === 0 ? (
-                      <tr>
-                        <td colSpan={5} className="px-4 py-12 text-center text-gray-500">
-                          No active premium users
-                        </td>
-                      </tr>
-                    ) : (
-                      data.upgradedUsers.map((user) => (
-                        <tr key={user.id} className="hover:bg-gray-700/50">
-                          <td className="px-4 py-3">
-                            <span className="text-sm font-medium text-white">{user.nickname}</span>
-                          </td>
-                          <td className="px-4 py-3">
-                            <span className="text-sm text-gray-300 font-mono">{user.phone}</span>
-                          </td>
-                          <td className="px-4 py-3">
-                            {user.subscriptionSource === 'promo_code' ? (
-                              <span className="px-2 py-1 rounded text-xs font-medium bg-purple-600/30 text-purple-400 border border-purple-600/50">
-                                Promo Code
-                              </span>
-                            ) : (
-                              <span className="px-2 py-1 rounded text-xs font-medium bg-blue-600/30 text-blue-400 border border-blue-600/50">
-                                Stripe
-                              </span>
-                            )}
-                          </td>
-                          <td className="px-4 py-3">
+                          ) : (
                             <span className="px-2 py-1 rounded text-xs font-medium bg-green-600/30 text-green-400 border border-green-600/50">
                               Active
                             </span>
-                          </td>
-                          <td className="px-4 py-3 text-right">
-                            <span className="text-sm text-gray-400">{formatDate(user.upgradedAt)}</span>
-                          </td>
-                        </tr>
-                      ))
-                    )}
-                  </tbody>
-                </table>
-              </div>
-            </div>
+                          )}
+                        </td>
+                        <td className="px-4 py-3 text-right">
+                          <span className="text-sm text-gray-400">{formatDate(row.date)}</span>
+                        </td>
+                      </tr>
+                    ))
+                )}
+              </tbody>
+            </table>
           </div>
         )}
 
