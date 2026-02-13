@@ -43,6 +43,16 @@ interface UpgradedUser {
   reason: string;
 }
 
+interface PendingUpgradeUser {
+  id: string;
+  userId: string;
+  phone: string;
+  nickname: string;
+  subscriptionStatus: string;
+  registeredAt: string;
+  registeredAtUnix: number;
+}
+
 interface InactiveUser {
   id: string;
   userId: string;
@@ -78,12 +88,14 @@ interface ProblemUsersData {
   logoutUsers: LogoutUser[];
   downgradedUsers: DowngradedUser[];
   upgradedUsers: UpgradedUser[];
+  pendingUpgradeUsers: PendingUpgradeUser[];
   inactiveUsers: InactiveUser[];
   emergencyExits: EmergencyExit[];
   stats: {
     totalLogouts: number;
     totalDowngrades: number;
     totalUpgrades: number;
+    totalPendingUpgrades: number;
     totalInactive: number;
     totalEmergencyExits: number;
   };
@@ -421,10 +433,11 @@ export default function UsersProblemsPage() {
       {/* Stats Cards */}
       {data && (
         <div className="max-w-7xl mx-auto px-4 py-4">
-          <div className="grid grid-cols-5 gap-3">
+          <div className="grid grid-cols-6 gap-3">
             {[
               { label: 'Emergency', value: data.stats.totalEmergencyExits, color: 'red' },
               { label: 'Upgrades', value: data.stats.totalUpgrades, color: 'green' },
+              { label: 'Pending', value: data.stats.totalPendingUpgrades || 0, color: 'yellow' },
               { label: 'Logouts', value: data.stats.totalLogouts, color: 'blue' },
               { label: 'Downgrades', value: data.stats.totalDowngrades, color: 'orange' },
               { label: 'Inactive 7d+', value: data.stats.totalInactive, color: 'gray' },
@@ -434,6 +447,7 @@ export default function UsersProblemsPage() {
                 className={`bg-gray-700 rounded-lg p-3 border-l-4 ${
                   stat.color === 'red' ? 'border-red-500' :
                   stat.color === 'green' ? 'border-green-500' :
+                  stat.color === 'yellow' ? 'border-yellow-500' :
                   stat.color === 'blue' ? 'border-blue-500' :
                   stat.color === 'orange' ? 'border-orange-500' :
                   'border-gray-500'
@@ -454,7 +468,7 @@ export default function UsersProblemsPage() {
         <div className="flex gap-2 py-3">
           {[
             { id: 'emergency', label: 'Emergency Exits', count: data?.stats.totalEmergencyExits },
-            { id: 'upgraded', label: 'Upgrades', count: data?.stats.totalUpgrades },
+            { id: 'upgraded', label: 'Upgrades', count: (data?.stats.totalUpgrades || 0) + (data?.stats.totalPendingUpgrades || 0) },
             { id: 'logout', label: 'Logouts', count: data?.stats.totalLogouts },
             { id: 'downgraded', label: 'Downgrades', count: data?.stats.totalDowngrades },
             { id: 'inactive', label: 'Inactive', count: data?.stats.totalInactive },
@@ -582,51 +596,108 @@ export default function UsersProblemsPage() {
 
         {/* Upgraded Users Tab */}
         {!isLoading && !error && data && activeTab === 'upgraded' && (
-          <div className="bg-gray-800 rounded-xl overflow-hidden">
-            <table className="w-full">
-              <thead>
-                <tr className="bg-gray-700/50 text-left">
-                  <th className="px-4 py-3 text-xs font-semibold text-gray-300 uppercase tracking-wider w-48">User</th>
-                  <th className="px-4 py-3 text-xs font-semibold text-gray-300 uppercase tracking-wider w-44">Phone</th>
-                  <th className="px-4 py-3 text-xs font-semibold text-gray-300 uppercase tracking-wider w-32">From</th>
-                  <th className="px-4 py-3 text-xs font-semibold text-gray-300 uppercase tracking-wider w-32">To</th>
-                  <th className="px-4 py-3 text-xs font-semibold text-gray-300 uppercase tracking-wider text-right">Date</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-700">
-                {data.upgradedUsers.length === 0 ? (
-                  <tr>
-                    <td colSpan={5} className="px-4 py-12 text-center text-gray-500">
-                      No subscription upgrades recorded
-                    </td>
-                  </tr>
-                ) : (
-                  data.upgradedUsers.map((user) => (
-                    <tr key={user.id} className="hover:bg-gray-700/50">
-                      <td className="px-4 py-3">
-                        <span className="text-sm font-medium text-white">{user.nickname}</span>
-                      </td>
-                      <td className="px-4 py-3">
-                        <span className="text-sm text-gray-300 font-mono">{user.phone}</span>
-                      </td>
-                      <td className="px-4 py-3">
-                        <span className="px-2 py-1 rounded text-xs font-medium bg-gray-600 text-gray-300">
-                          {user.previousStatus}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3">
-                        <span className="px-2 py-1 rounded text-xs font-medium bg-green-600/30 text-green-400 border border-green-600/50">
-                          {user.newStatus}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3 text-right">
-                        <span className="text-sm text-gray-400">{formatDate(user.upgradedAt)}</span>
-                      </td>
+          <div className="space-y-6">
+            {/* Pending Upgrade Section */}
+            {data.pendingUpgradeUsers && data.pendingUpgradeUsers.length > 0 && (
+              <div>
+                <div className="flex items-center gap-3 mb-3">
+                  <h3 className="text-sm font-semibold text-orange-400 uppercase tracking-wider">Pending Upgrade</h3>
+                  <span className="px-2 py-0.5 text-xs font-bold rounded-full bg-orange-600/30 text-orange-400 border border-orange-600/50">
+                    {data.pendingUpgradeUsers.length}
+                  </span>
+                </div>
+                <div className="bg-gray-800 rounded-xl overflow-hidden border border-orange-600/30">
+                  <table className="w-full">
+                    <thead>
+                      <tr className="bg-orange-900/20 text-left">
+                        <th className="px-4 py-3 text-xs font-semibold text-gray-300 uppercase tracking-wider w-48">User</th>
+                        <th className="px-4 py-3 text-xs font-semibold text-gray-300 uppercase tracking-wider w-44">Phone</th>
+                        <th className="px-4 py-3 text-xs font-semibold text-gray-300 uppercase tracking-wider w-40">Status</th>
+                        <th className="px-4 py-3 text-xs font-semibold text-gray-300 uppercase tracking-wider text-right">Registered</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-700">
+                      {data.pendingUpgradeUsers.map((user) => (
+                        <tr key={user.id} className="hover:bg-gray-700/50">
+                          <td className="px-4 py-3">
+                            <span className="text-sm font-medium text-white">{user.nickname}</span>
+                          </td>
+                          <td className="px-4 py-3">
+                            <span className="text-sm text-gray-300 font-mono">{user.phone}</span>
+                          </td>
+                          <td className="px-4 py-3">
+                            <span className="px-2 py-1 rounded text-xs font-medium bg-orange-600/30 text-orange-400 border border-orange-600/50">
+                              Pending Upgrade
+                            </span>
+                          </td>
+                          <td className="px-4 py-3 text-right">
+                            <span className="text-sm text-gray-400">{formatDate(user.registeredAt)}</span>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+
+            {/* Completed Upgrades Section */}
+            <div>
+              {data.pendingUpgradeUsers && data.pendingUpgradeUsers.length > 0 && (
+                <div className="flex items-center gap-3 mb-3">
+                  <h3 className="text-sm font-semibold text-green-400 uppercase tracking-wider">Completed Upgrades</h3>
+                  <span className="px-2 py-0.5 text-xs font-bold rounded-full bg-green-600/30 text-green-400 border border-green-600/50">
+                    {data.upgradedUsers.length}
+                  </span>
+                </div>
+              )}
+              <div className="bg-gray-800 rounded-xl overflow-hidden">
+                <table className="w-full">
+                  <thead>
+                    <tr className="bg-gray-700/50 text-left">
+                      <th className="px-4 py-3 text-xs font-semibold text-gray-300 uppercase tracking-wider w-48">User</th>
+                      <th className="px-4 py-3 text-xs font-semibold text-gray-300 uppercase tracking-wider w-44">Phone</th>
+                      <th className="px-4 py-3 text-xs font-semibold text-gray-300 uppercase tracking-wider w-32">From</th>
+                      <th className="px-4 py-3 text-xs font-semibold text-gray-300 uppercase tracking-wider w-32">To</th>
+                      <th className="px-4 py-3 text-xs font-semibold text-gray-300 uppercase tracking-wider text-right">Date</th>
                     </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
+                  </thead>
+                  <tbody className="divide-y divide-gray-700">
+                    {data.upgradedUsers.length === 0 ? (
+                      <tr>
+                        <td colSpan={5} className="px-4 py-12 text-center text-gray-500">
+                          No subscription upgrades recorded
+                        </td>
+                      </tr>
+                    ) : (
+                      data.upgradedUsers.map((user) => (
+                        <tr key={user.id} className="hover:bg-gray-700/50">
+                          <td className="px-4 py-3">
+                            <span className="text-sm font-medium text-white">{user.nickname}</span>
+                          </td>
+                          <td className="px-4 py-3">
+                            <span className="text-sm text-gray-300 font-mono">{user.phone}</span>
+                          </td>
+                          <td className="px-4 py-3">
+                            <span className="px-2 py-1 rounded text-xs font-medium bg-gray-600 text-gray-300">
+                              {user.previousStatus}
+                            </span>
+                          </td>
+                          <td className="px-4 py-3">
+                            <span className="px-2 py-1 rounded text-xs font-medium bg-green-600/30 text-green-400 border border-green-600/50">
+                              {user.newStatus}
+                            </span>
+                          </td>
+                          <td className="px-4 py-3 text-right">
+                            <span className="text-sm text-gray-400">{formatDate(user.upgradedAt)}</span>
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
           </div>
         )}
 
