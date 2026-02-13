@@ -704,12 +704,14 @@ export default function UsersProblemsPage() {
                       </td>
                       <td className="px-4 py-3">
                         <span className={`px-2 py-1 rounded text-xs font-medium ${
+                          user.reason === 'geofence_block' ? 'bg-red-600/30 text-red-400 border border-red-600/50' :
                           user.reason === 'user_initiated' ? 'bg-blue-600/30 text-blue-400' :
                           user.reason === 'user_cancelled' ? 'bg-orange-600/30 text-orange-400' :
                           user.reason.includes('subscription') ? 'bg-red-600/30 text-red-400' :
                           'bg-gray-600 text-gray-300'
                         }`}>
-                          {user.reason === 'user_initiated' ? 'Manual' :
+                          {user.reason === 'geofence_block' ? 'GEO-Fence' :
+                           user.reason === 'user_initiated' ? 'Manual' :
                            user.reason === 'user_cancelled' ? 'Cancelled' :
                            user.reason.includes('ended') ? 'Sub Ended' :
                            user.reason}
