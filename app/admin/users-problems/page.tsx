@@ -603,8 +603,8 @@ export default function UsersProblemsPage() {
                 <tr className="bg-gray-700/50 text-left">
                   <th className="px-4 py-3 text-xs font-semibold text-gray-300 uppercase tracking-wider w-48">User</th>
                   <th className="px-4 py-3 text-xs font-semibold text-gray-300 uppercase tracking-wider w-44">Phone</th>
-                  <th className="px-4 py-3 text-xs font-semibold text-gray-300 uppercase tracking-wider w-40">Source</th>
-                  <th className="px-4 py-3 text-xs font-semibold text-gray-300 uppercase tracking-wider w-32">Status</th>
+                  <th className="px-4 py-3 text-xs font-semibold text-gray-300 uppercase tracking-wider w-36">Source</th>
+                  <th className="px-4 py-3 text-xs font-semibold text-gray-300 uppercase tracking-wider w-44">Status</th>
                   <th className="px-4 py-3 text-xs font-semibold text-gray-300 uppercase tracking-wider text-right">Date</th>
                 </tr>
               </thead>
