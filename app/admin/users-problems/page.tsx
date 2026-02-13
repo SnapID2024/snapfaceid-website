@@ -38,6 +38,7 @@ interface UpgradedUser {
   nickname: string;
   previousStatus: string;
   newStatus: string;
+  subscriptionSource?: string;
   upgradedAt: string;
   upgradedAtUnix: number;
   reason: string;
@@ -657,16 +658,16 @@ export default function UsersProblemsPage() {
                     <tr className="bg-gray-700/50 text-left">
                       <th className="px-4 py-3 text-xs font-semibold text-gray-300 uppercase tracking-wider w-48">User</th>
                       <th className="px-4 py-3 text-xs font-semibold text-gray-300 uppercase tracking-wider w-44">Phone</th>
-                      <th className="px-4 py-3 text-xs font-semibold text-gray-300 uppercase tracking-wider w-32">From</th>
-                      <th className="px-4 py-3 text-xs font-semibold text-gray-300 uppercase tracking-wider w-32">To</th>
-                      <th className="px-4 py-3 text-xs font-semibold text-gray-300 uppercase tracking-wider text-right">Date</th>
+                      <th className="px-4 py-3 text-xs font-semibold text-gray-300 uppercase tracking-wider w-40">Source</th>
+                      <th className="px-4 py-3 text-xs font-semibold text-gray-300 uppercase tracking-wider w-32">Status</th>
+                      <th className="px-4 py-3 text-xs font-semibold text-gray-300 uppercase tracking-wider text-right">Activated</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-700">
                     {data.upgradedUsers.length === 0 ? (
                       <tr>
                         <td colSpan={5} className="px-4 py-12 text-center text-gray-500">
-                          No subscription upgrades recorded
+                          No active premium users
                         </td>
                       </tr>
                     ) : (
@@ -679,13 +680,19 @@ export default function UsersProblemsPage() {
                             <span className="text-sm text-gray-300 font-mono">{user.phone}</span>
                           </td>
                           <td className="px-4 py-3">
-                            <span className="px-2 py-1 rounded text-xs font-medium bg-gray-600 text-gray-300">
-                              {user.previousStatus}
-                            </span>
+                            {user.subscriptionSource === 'promo_code' ? (
+                              <span className="px-2 py-1 rounded text-xs font-medium bg-purple-600/30 text-purple-400 border border-purple-600/50">
+                                Promo Code
+                              </span>
+                            ) : (
+                              <span className="px-2 py-1 rounded text-xs font-medium bg-blue-600/30 text-blue-400 border border-blue-600/50">
+                                Stripe
+                              </span>
+                            )}
                           </td>
                           <td className="px-4 py-3">
                             <span className="px-2 py-1 rounded text-xs font-medium bg-green-600/30 text-green-400 border border-green-600/50">
-                              {user.newStatus}
+                              Active
                             </span>
                           </td>
                           <td className="px-4 py-3 text-right">
