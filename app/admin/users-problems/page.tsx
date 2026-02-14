@@ -39,6 +39,7 @@ interface UpgradedUser {
   previousStatus: string;
   newStatus: string;
   subscriptionSource?: string;
+  isTrusted?: boolean;
   upgradedAt: string;
   upgradedAtUnix: number;
   reason: string;
@@ -50,6 +51,7 @@ interface PendingUpgradeUser {
   phone: string;
   nickname: string;
   subscriptionStatus: string;
+  isTrusted?: boolean;
   registeredAt: string;
   registeredAtUnix: number;
 }
@@ -102,7 +104,15 @@ interface ProblemUsersData {
   };
 }
 
-type TabType = 'emergency' | 'upgraded' | 'logout' | 'downgraded' | 'inactive' | 'device-reset' | 'delete-person';
+type TabType = 'emergency' | 'upgraded' | 'logout' | 'downgraded' | 'inactive' | 'device-reset' | 'delete-person' | 'blocked-numbers';
+
+interface BlockedNumber {
+  id: string;
+  phone: string;
+  blockedAt: string | null;
+  reason: string;
+  deletedPersonId: string;
+}
 
 interface DeletePersonPreview {
   id: string;
@@ -111,6 +121,10 @@ interface DeletePersonPreview {
   selfieUrls: string[];
   selfieUuids: string[];
   reviewCount: number;
+  isRegisteredUser?: boolean;
+  userId?: string;
+  userNickname?: string;
+  reviewsContributed?: number;
 }
 
 export default function UsersProblemsPage() {
@@ -138,6 +152,11 @@ export default function UsersProblemsPage() {
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [deletePreview, setDeletePreview] = useState<DeletePersonPreview | null>(null);
   const [deleteResults, setDeleteResults] = useState<any>(null);
+  const [blockPhone, setBlockPhone] = useState(false);
+
+  // Blocked Numbers State
+  const [blockedNumbers, setBlockedNumbers] = useState<BlockedNumber[]>([]);
+  const [blockedLoading, setBlockedLoading] = useState(false);
 
   const fetchData = useCallback(async (token: string, showLoading = true) => {
     if (showLoading) setIsLoading(true);
@@ -181,6 +200,13 @@ export default function UsersProblemsPage() {
 
     return () => clearInterval(interval);
   }, [router, fetchData]);
+
+  // Fetch blocked numbers when tab is activated
+  useEffect(() => {
+    if (activeTab === 'blocked-numbers' && blockedNumbers.length === 0 && !blockedLoading) {
+      fetchBlockedNumbers();
+    }
+  }, [activeTab]);
 
   const formatDate = (dateStr: string | null) => {
     if (!dateStr) return '—';
@@ -368,6 +394,7 @@ export default function UsersProblemsPage() {
         body: JSON.stringify({
           phone: deletePhone.trim(),
           confirm: 'DELETE',
+          blockPhone: blockPhone,
         }),
       });
 
@@ -394,6 +421,65 @@ export default function UsersProblemsPage() {
     setDeleteError(null);
     setDeletePreview(null);
     setDeleteResults(null);
+    setBlockPhone(false);
+  };
+
+  // Blocked Numbers Functions
+  const fetchBlockedNumbers = async () => {
+    const token = localStorage.getItem('adminToken');
+    if (!token) return;
+
+    setBlockedLoading(true);
+    try {
+      const response = await fetch('/api/admin/blocked-numbers', {
+        headers: { 'Authorization': `Bearer ${token}` },
+      });
+
+      if (!response.ok) {
+        if (response.status === 401) {
+          localStorage.removeItem('adminToken');
+          router.push('/admin');
+          return;
+        }
+        throw new Error('Failed to fetch blocked numbers');
+      }
+
+      const data = await response.json();
+      setBlockedNumbers(data.blockedNumbers || []);
+    } catch (err) {
+      console.error('Error fetching blocked numbers:', err);
+    } finally {
+      setBlockedLoading(false);
+    }
+  };
+
+  const handleUnblockNumber = async (phone: string) => {
+    if (!confirm(`Unblock ${phone}? This will allow them to register again.`)) return;
+
+    const token = localStorage.getItem('adminToken');
+    if (!token) return;
+
+    try {
+      const response = await fetch('/api/admin/blocked-numbers', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({ phone }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.detail || data.error || 'Failed to unblock');
+      }
+
+      // Refresh list
+      fetchBlockedNumbers();
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Failed to unblock number');
+    }
   };
 
   return (
@@ -475,6 +561,7 @@ export default function UsersProblemsPage() {
             { id: 'inactive', label: 'Inactive', count: data?.stats.totalInactive },
             { id: 'device-reset', label: 'Device Reset', count: undefined },
             { id: 'delete-person', label: 'Delete Person', count: undefined },
+            { id: 'blocked-numbers', label: 'Blocked', count: blockedNumbers.length > 0 ? blockedNumbers.length : undefined },
           ].map((tab) => (
             <button
               key={tab.id}
@@ -605,20 +692,21 @@ export default function UsersProblemsPage() {
                   <th className="px-4 py-3 text-xs font-semibold text-gray-300 uppercase tracking-wider w-44">Phone</th>
                   <th className="px-4 py-3 text-xs font-semibold text-gray-300 uppercase tracking-wider w-36">Source</th>
                   <th className="px-4 py-3 text-xs font-semibold text-gray-300 uppercase tracking-wider w-44">Status</th>
+                  <th className="px-4 py-3 text-xs font-semibold text-gray-300 uppercase tracking-wider w-52 whitespace-nowrap">Eros escort model</th>
                   <th className="px-4 py-3 text-xs font-semibold text-gray-300 uppercase tracking-wider text-right">Date</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-700">
                 {data.upgradedUsers.length === 0 && (!data.pendingUpgradeUsers || data.pendingUpgradeUsers.length === 0) ? (
                   <tr>
-                    <td colSpan={5} className="px-4 py-12 text-center text-gray-500">
+                    <td colSpan={6} className="px-4 py-12 text-center text-gray-500">
                       No users found
                     </td>
                   </tr>
                 ) : (
                   [
-                    ...data.upgradedUsers.map((u) => ({ type: 'active' as const, nickname: u.nickname, phone: u.phone, source: u.subscriptionSource || 'stripe', date: u.upgradedAt, dateUnix: u.upgradedAtUnix, id: u.id })),
-                    ...(data.pendingUpgradeUsers || []).map((u) => ({ type: 'pending' as const, nickname: u.nickname, phone: u.phone, source: 'pending', date: u.registeredAt, dateUnix: u.registeredAtUnix, id: u.id })),
+                    ...data.upgradedUsers.map((u) => ({ type: 'active' as const, nickname: u.nickname, phone: u.phone, source: u.subscriptionSource || 'stripe', isTrusted: u.isTrusted || false, date: u.upgradedAt, dateUnix: u.upgradedAtUnix, id: u.id })),
+                    ...(data.pendingUpgradeUsers || []).map((u) => ({ type: 'pending' as const, nickname: u.nickname, phone: u.phone, source: 'pending', isTrusted: u.isTrusted || false, date: u.registeredAt, dateUnix: u.registeredAtUnix, id: u.id })),
                   ]
                     .sort((a, b) => b.dateUnix - a.dateUnix)
                     .map((row) => (
@@ -653,6 +741,15 @@ export default function UsersProblemsPage() {
                             <span className="px-2 py-1 rounded text-xs font-medium bg-green-600/30 text-green-400 border border-green-600/50">
                               Active
                             </span>
+                          )}
+                        </td>
+                        <td className="px-4 py-3">
+                          {row.isTrusted ? (
+                            <span className="px-2 py-1 rounded text-xs font-medium bg-pink-600/30 text-pink-400 border border-pink-600/50">
+                              Verified
+                            </span>
+                          ) : (
+                            <span className="text-sm text-gray-600">—</span>
                           )}
                         </td>
                         <td className="px-4 py-3 text-right">
@@ -1143,6 +1240,39 @@ export default function UsersProblemsPage() {
                     )}
                   </div>
 
+                  {/* Registered User Warning */}
+                  {deletePreview.isRegisteredUser && (
+                    <div className="p-4 bg-orange-900/20 border border-orange-600/50 rounded-lg">
+                      <div className="flex items-center gap-2 mb-2">
+                        <svg className="w-5 h-5 text-orange-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                        </svg>
+                        <span className="text-orange-300 font-semibold text-sm">Registered User</span>
+                      </div>
+                      <div className="space-y-1 text-sm">
+                        <p className="text-orange-200">
+                          <span className="text-orange-400">Nickname:</span> {deletePreview.userNickname}
+                        </p>
+                        <p className="text-orange-200">
+                          <span className="text-orange-400">Reviews contributed:</span>{' '}
+                          <span className="font-bold">{deletePreview.reviewsContributed}</span>
+                          {(deletePreview.reviewsContributed ?? 0) > 0 && (
+                            <span className="text-orange-400/80 ml-1">— These will be deleted from all profiles</span>
+                          )}
+                        </p>
+                      </div>
+                      <label className="flex items-center gap-2 mt-3 pt-3 border-t border-orange-700/50 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={blockPhone}
+                          onChange={(e) => setBlockPhone(e.target.checked)}
+                          className="w-4 h-4 rounded border-orange-600 bg-gray-700 text-orange-500 focus:ring-orange-500"
+                        />
+                        <span className="text-sm text-orange-300">Block this phone from future registrations</span>
+                      </label>
+                    </div>
+                  )}
+
                   {/* What will be deleted */}
                   <div className="p-4 bg-red-900/20 border border-red-700/50 rounded-lg">
                     <p className="text-red-300 font-semibold text-sm mb-2">Will be deleted:</p>
@@ -1150,7 +1280,11 @@ export default function UsersProblemsPage() {
                       <li>• {deletePreview.selfieCount} photo(s) from Luxand facial recognition</li>
                       <li>• {deletePreview.selfieCount} image(s) from Firebase Storage</li>
                       <li>• {deletePreview.reviewCount} review(s) attached to this profile</li>
+                      {deletePreview.isRegisteredUser && (deletePreview.reviewsContributed ?? 0) > 0 && (
+                        <li>• {deletePreview.reviewsContributed} review(s) contributed by this user on other profiles</li>
+                      )}
                       <li>• The entire Firestore document</li>
+                      {blockPhone && <li>• Phone will be blocked from future registrations</li>}
                     </ul>
                   </div>
 
@@ -1241,6 +1375,18 @@ export default function UsersProblemsPage() {
                             {deleteResults.firestore_deleted ? 'Yes' : 'No'}
                           </span>
                         </div>
+                        {deleteResults.reviewsDeleted > 0 && (
+                          <div className="flex justify-between">
+                            <span className="text-gray-400">Reviews cleaned:</span>
+                            <span className="text-green-400">{deleteResults.reviewsDeleted}</span>
+                          </div>
+                        )}
+                        {deleteResults.phoneBlocked && (
+                          <div className="flex justify-between">
+                            <span className="text-gray-400">Phone blocked:</span>
+                            <span className="text-orange-400 font-semibold">Yes</span>
+                          </div>
+                        )}
                       </div>
 
                       {/* Errors if any */}
@@ -1265,6 +1411,77 @@ export default function UsersProblemsPage() {
                 </div>
               )}
             </div>
+          </div>
+        )}
+
+        {/* Blocked Numbers Tab */}
+        {activeTab === 'blocked-numbers' && (
+          <div className="bg-gray-800 rounded-xl overflow-hidden">
+            {blockedLoading ? (
+              <div className="p-12 text-center">
+                <div className="w-8 h-8 border-3 border-purple-500 border-t-transparent rounded-full animate-spin mx-auto mb-3" />
+                <p className="text-gray-400 text-sm">Loading blocked numbers...</p>
+              </div>
+            ) : (
+              <table className="w-full">
+                <thead>
+                  <tr className="bg-gray-700/50 text-left">
+                    <th className="px-4 py-3 text-xs font-semibold text-gray-300 uppercase tracking-wider w-44">Phone</th>
+                    <th className="px-4 py-3 text-xs font-semibold text-gray-300 uppercase tracking-wider w-36">Reason</th>
+                    <th className="px-4 py-3 text-xs font-semibold text-gray-300 uppercase tracking-wider w-48">Person ID</th>
+                    <th className="px-4 py-3 text-xs font-semibold text-gray-300 uppercase tracking-wider w-36">Blocked At</th>
+                    <th className="px-4 py-3 text-xs font-semibold text-gray-300 uppercase tracking-wider w-32 text-right">Action</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-700">
+                  {blockedNumbers.length === 0 ? (
+                    <tr>
+                      <td colSpan={5} className="px-4 py-12 text-center text-gray-500">
+                        No blocked numbers found
+                      </td>
+                    </tr>
+                  ) : (
+                    blockedNumbers.map((item) => (
+                      <tr key={item.id} className="hover:bg-gray-700/50">
+                        <td className="px-4 py-3">
+                          <span className="text-sm text-white font-mono">{item.phone}</span>
+                        </td>
+                        <td className="px-4 py-3">
+                          <span className="px-2 py-1 rounded text-xs font-medium bg-red-600/30 text-red-400 border border-red-600/50">
+                            {item.reason || 'admin_delete'}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3">
+                          <span className="text-xs text-gray-400 font-mono">{item.deletedPersonId || '—'}</span>
+                        </td>
+                        <td className="px-4 py-3">
+                          <span className="text-sm text-gray-400">{formatDate(item.blockedAt)}</span>
+                        </td>
+                        <td className="px-4 py-3 text-right">
+                          <button
+                            onClick={() => handleUnblockNumber(item.phone)}
+                            className="px-3 py-1.5 text-xs font-semibold bg-green-600/20 text-green-400 border border-green-600/50 rounded-lg hover:bg-green-600/40 transition-colors"
+                          >
+                            Unblock
+                          </button>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            )}
+            {!blockedLoading && blockedNumbers.length > 0 && (
+              <div className="px-4 py-3 border-t border-gray-700 flex justify-between items-center">
+                <span className="text-xs text-gray-500">{blockedNumbers.length} blocked number(s)</span>
+                <button
+                  onClick={fetchBlockedNumbers}
+                  className="text-xs text-purple-400 hover:text-purple-300 transition-colors"
+                >
+                  Refresh
+                </button>
+              </div>
+            )}
           </div>
         )}
       </div>
